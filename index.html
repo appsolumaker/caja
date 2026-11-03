@@ -222,6 +222,19 @@ select.inp{padding:8px 10px;}
 .activar h1{font-size:20px;margin:10px 0;}
 .activar p{color:var(--text-dim);margin-bottom:10px;}
 .oculto{display:none!important;}
+/* Turnos */
+.turno-card{max-width:560px;margin:20px auto;}
+.cj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:6px;}
+.cj-btn{border:1px solid var(--border);background:var(--bg2);border-radius:10px;padding:14px 10px;font-weight:800;font-size:15px;text-align:center;}
+.cj-btn small{display:block;font-size:11px;font-weight:600;color:var(--text-dim);margin-top:3px;}
+.cj-btn.sel{border-color:var(--border-g);background:var(--green-dim);color:var(--green);}
+.cj-btn:disabled{opacity:.45;cursor:not-allowed;}
+.cie-tabla{width:100%;border-collapse:collapse;font-size:13px;}
+.cie-tabla td{padding:6px 0;border-bottom:1px dashed var(--border);}
+.cie-tabla td.r{text-align:right;white-space:nowrap;font-weight:700;}
+.cie-tit{font-size:12px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 4px;}
+.dif-ok{color:var(--green);} .dif-mal{color:var(--red);} .dif-sob{color:var(--amber);}
+.pill.turno{border-color:var(--border-g);color:var(--green);}
 </style>
 </head>
 <body>
@@ -229,6 +242,7 @@ select.inp{padding:8px 10px;}
 <header class="top">
   <div class="top-tit" id="tTit">Caja sin internet<small id="tSub">ControlMaster</small></div>
   <div class="flex1"></div>
+  <button type="button" class="pill turno oculto" id="pillTurno" onclick="irCierre()" title="Cerrar turno">🧾 <span id="turnoNom"></span></button>
   <button type="button" class="pill" id="pillEstado" onclick="irA('ventas')"><span class="dot"></span><span id="pillTxt">Revisando…</span></button>
   <nav class="nav" id="nav">
     <button type="button" data-v="vender" class="on" onclick="irA('vender')">🛒 Vender</button>
@@ -285,6 +299,23 @@ select.inp{padding:8px 10px;}
   </div>
 </section>
 
+<!-- TURNO: ¿quién está en la caja? -->
+<section class="vista" id="vTurno">
+  <div class="wrap">
+    <div class="card turno-card">
+      <div class="card-tit">🧾 Abrir turno</div>
+      <div id="turnoCuerpo"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CIERRE DE TURNO -->
+<section class="vista" id="vCierre">
+  <div class="wrap" style="max-width:640px;">
+    <div class="card" id="cierreCard"></div>
+  </div>
+</section>
+
 <!-- VENTAS DEL EQUIPO -->
 <section class="vista" id="vVentas">
   <div class="wrap">
@@ -293,6 +324,8 @@ select.inp{padding:8px 10px;}
       <button type="button" class="btn" onclick="descargarRespaldo()">💾 Descargar respaldo</button>
     </div>
     <div class="res" id="resumen"></div>
+    <div id="porCajero"></div>
+    <div id="turnosLista"></div>
     <div class="filtros" id="filtros">
       <button type="button" class="btn sm on" data-f="hoy" onclick="filtrarVentas('hoy')">Hoy</button>
       <button type="button" class="btn sm" data-f="por" onclick="filtrarVentas('por')">Por subir</button>
@@ -321,7 +354,14 @@ select.inp{padding:8px 10px;}
     </div>
     <div class="card">
       <div class="card-tit">🖨️ Preferencias</div>
-      <label class="switch"><input type="checkbox" id="chkDosCopias" onchange="guardarPref()"> Imprimir 2 copias del ticket</label>
+      <label class="lbl" for="selTamTicket" style="margin-top:0;">Tamaño del ticket y del cierre</label>
+      <select class="inp" id="selTamTicket" onchange="guardarPref()">
+        <option value="auto">Como en Configuración del sistema</option>
+        <option value="80">Ticket de 80 mm</option>
+        <option value="58">Ticket de 58 mm</option>
+        <option value="carta">Hoja carta (impresora normal)</option>
+      </select>
+      <label class="switch" style="margin-top:6px;"><input type="checkbox" id="chkDosCopias" onchange="guardarPref()"> Imprimir 2 copias del ticket</label>
       <label class="switch"><input type="checkbox" id="chkClaro" onchange="guardarPref()"> Tema claro</label>
       <div style="font-size:12px;color:var(--text-dim);margin-top:8px;" id="verApp"></div>
     </div>
@@ -384,7 +424,7 @@ select.inp{padding:8px 10px;}
 //  Todo queda en este equipo (IndexedDB) hasta que el sistema confirma el número de factura.
 //  Solo tasaBin APAGADO: los Bs a tasa BCV y los $ a tasa Divisas (H9).
 // ══════════════════════════════════════════════════════════════
-const APP_VER = "1.2 · 3-11-2026";
+const APP_VER = "1.3 · 3-11-2026";
 const DB_NOMBRE = "cm_caja_sin_internet";
 const TOL = 0.011;   // un centavo, como el servidor (> 0,01)
 
@@ -413,7 +453,9 @@ const S = {
   datos: null,       // lo que mandó el sistema (vsi_datos) + descargadoEn
   tasas: null,       // { bcv, div, fecha, origen: "sistema" | "manual" }
   ventas: [],        // todas las ventas de este equipo
-  pref: { dosCopias: false, claro: false },
+  pref: { dosCopias: false, claro: false, tamTicket: "auto" },
+  turno: null,       // { id, cajeroId, cajeroNombre, apertura, fondoBs, fondoUsd } — el turno abierto
+  cierres: [],       // cierres de turno de este equipo (se suben al sistema: hoja CierresCaja)
   online: null,      // true / false / null (no se sabe)
   sincronizando: false,
   permisoMal: "",    // texto si el sistema dijo que este equipo no tiene permiso
@@ -517,6 +559,9 @@ async function arrancar(){
   S.datos = await kvGet("datos") || null;
   S.tasas = await kvGet("tasas") || null;
   S.pref = Object.assign(S.pref, await kvGet("pref") || {});
+  aplicarTema();
+  S.turno = await kvGet("turno") || null;
+  S.cierres = await kvGet("cierres") || [];
   S.ventas = (await ventasTodas()) || [];
   aplicarTema();
 
@@ -556,6 +601,7 @@ async function borrarDatosDelEquipo(){
 function listo(){
   mostrarVista(S.vista === "activar" ? "vender" : S.vista);
   pintarTodo();
+  if (S.vista === "vender" && !S.turno) { mostrarVista("turno"); pintarTurno(); }
   setTimeout(async () => { const r = await sincronizar(); if (!(r && r.subidas)) actualizarDatos(null, true); }, 800);
   setInterval(() => sincronizar(), 60000);                     // cada minuto, si hay algo por subir
   setInterval(() => { if (S.online !== false) actualizarDatos(null, true); }, 20 * 60000);
@@ -623,12 +669,14 @@ async function actualizarDatos(btn, silencioso){
 // ══ VISTAS Y PINTADO GENERAL ══
 function mostrarVista(v){
   S.vista = v;
-  ["activar", "vender", "ventas", "ajustes"].forEach(x => $("v" + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle("on", x === v));
-  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  ["activar", "vender", "ventas", "ajustes", "turno", "cierre"].forEach(x => $("v" + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle("on", x === v));
+  const nv = (v === "turno" || v === "cierre") ? "vender" : v;
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.v === nv));
   $("nav").classList.toggle("oculto", v === "activar");
 }
 function irA(v){
   if (!S.datos) return;
+  if (v === "vender" && !S.turno) { mostrarVista("turno"); pintarTurno(); return; }   // primero, abrir turno
   mostrarVista(v);
   if (v === "ventas") pintarVentas();
   if (v === "ajustes") pintarAjustes();
@@ -636,6 +684,7 @@ function irA(v){
 }
 function pintarTodo(){
   pintarCabecera(); pintarEstado(); pintarBanners();
+  if (S.vista === "turno") pintarTurno();
   pintarSelectores(); buscar(); pintarFactura();
   if (S.vista === "ventas") pintarVentas();
   if (S.vista === "ajustes") pintarAjustes();
@@ -643,6 +692,8 @@ function pintarTodo(){
 function pintarCabecera(){
   const d = S.datos;
   if (!d) return;
+  $("pillTurno").classList.toggle("oculto", !S.turno);
+  if (S.turno) $("turnoNom").textContent = S.turno.cajeroNombre + " · Cerrar turno";
   $("tTit").innerHTML = esc(d.negocio || "Mi negocio") + "<small>Caja sin internet · caja " + esc(d.caja) + " · equipo " + esc(d.equipo || "") + "</small>";
   const t = S.tasas || {};
   const vieja = t.fecha && t.fecha !== hoyTxt();
@@ -653,6 +704,7 @@ function pintarCabecera(){
 function cuentas(){
   let por = 0, mal = 0;
   S.ventas.forEach(v => { if (v.estado === "por_subir") por++; else if (v.estado === "pendiente" || v.estado === "invalida") mal++; });
+  S.cierres.forEach(c => { if (c.estado === "por_subir") por++; });
   return { por, mal };
 }
 function pintarEstado(){
@@ -1261,19 +1313,21 @@ async function pgConfirmar(){
 }
 function vendedorDeLaVenta(){
   const d = S.datos;
-  const cajero = (d.cajero && d.cajero.nombre) || "";
-  if (!d.trabajoVendedores) return { ventaDirecta: true, vendedorNombre: "", comision: 0, cajeroNombre: cajero };
-  if (d.modoCajas !== "cajero") return { vendedorNombre: (d.vendedor && d.vendedor.nombre) || "", comision: Number(d.vendedor && d.vendedor.comision) || 0, cajeroNombre: cajero };
+  const cj = { cajeroNombre: S.turno ? S.turno.cajeroNombre : ((d.cajero && d.cajero.nombre) || ""), cajeroId: S.turno ? S.turno.cajeroId : 0 };   // el cajero del turno
+  if (!d.trabajoVendedores) return Object.assign({ ventaDirecta: true, vendedorNombre: "", comision: 0 }, cj);
+  if (d.modoCajas !== "cajero") return Object.assign({ vendedorNombre: (d.vendedor && d.vendedor.nombre) || "", comision: Number(d.vendedor && d.vendedor.comision) || 0 }, cj);
   const v = (d.vendedores || []).find(x => String(x.id) === String(F.vend));
-  if (v) return { vendedorId: v.id, vendedorNombre: v.nombre, comision: Number(v.comision) || 0, cajeroNombre: cajero };
-  return { ventaDirecta: true, vendedorNombre: "", comision: 0, cajeroNombre: cajero };
+  if (v) return Object.assign({ vendedorId: v.id, vendedorNombre: v.nombre, comision: Number(v.comision) || 0 }, cj);
+  return Object.assign({ ventaDirecta: true, vendedorNombre: "", comision: 0 }, cj);
 }
 async function pgGuardar(pagos, vuelto){
   const btn = $("pgGuardar");
   btnOcupado(btn, "Guardando…"); $("pgCerrar").disabled = true;
+  if (!S.turno) { btnLibre(btn); $("pgCerrar").disabled = false; cerrarPago(); irA("vender"); return; }
   const t = S.tasas, ahora = new Date();
   const v = {
     id: uuid(), numero: "", creada: ahoraTxt(ahora), fecha: hoyTxt(ahora),
+    numeroTicket: proximoNumero(), turno: S.turno.id,
     caja: S.datos.caja, equipo: S.datos.equipo,
     tasas: { bcv: t.bcv, div: tasaUsd() },
     items: F.items.map(i => ({ tipo: i.tipo, codigo: i.codigo, nombre: i.nombre, codigoBarras: i.codigoBarras, cantidad: Number(i.cantidad), precio: i.base, iva: i.iva, manual: !!i.manual })),
@@ -1298,7 +1352,7 @@ async function pgGuardar(pagos, vuelto){
   _ventaGuardada = v;
   btnLibre(btn); $("pgCerrar").disabled = false;
   $("pgForm").classList.add("oculto"); $("pgOk").classList.remove("oculto");
-  $("pgOkNum").textContent = v.numero;
+  $("pgOkNum").textContent = ((S.datos.impresion || {}).nombreDoc || "Nota de Entrega") + " N° " + v.numeroTicket;
   $("pgOkTxt").innerHTML = "Total Bs " + fmt(v.totalBs) + " · $" + fmt(v.total) + " BCV<br>" + (S.online ? "Se sube al sistema en un momento." : "Se sube sola al sistema cuando vuelva el internet.");
   limpiarVenta();
   pintarEstado(); pintarBanners();
@@ -1317,7 +1371,8 @@ function pgTerminar(imprimir){
 function htmlTicket(v){
   const d = S.datos || {}, cfg = Object.assign({ formato: "ticket80", moneda: "BS", mostrarEquiv: true, nombreDoc: "Nota de Entrega", pieLinea1: "***Gracias por su compra***", pieLinea2: "Puede solicitar su factura en caja." }, d.impresion || {});
   const enBS = cfg.moneda !== "USD", tasa = v.tasas.bcv || 1, conv = usd => enBS ? fmt(usd * tasa) : fmt(usd), sym = enBS ? "Bs." : "$";
-  const ancho = cfg.formato === "ticket58" ? "58mm" : "80mm", mostrarPU = cfg.formato !== "ticket58";
+  const fmtT = formatoTicket(), mostrarPU = fmtT !== "58";
+  const nroT = v.numeroFactura || v.numeroTicket || v.numero;
   const its = v.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, base: i.precio, iva: i.iva }));
   const x = totales(its, { tipo: v.pago.descuentoTipo, valor: v.pago.descuentoValor });
   const p = v.pago, esGen = !p.clienteCedula || p.clienteNombre === "Genérico";
@@ -1349,10 +1404,10 @@ function htmlTicket(v){
   const desc = x.desc > 0 ? '<tr><td>Descuento:</td><td style="text-align:right;">- ' + sym + " " + conv(x.desc) + "</td></tr>" : "";
   const formaPago = cfg.mostrarFormaPago !== false ? '<hr class="sep"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Forma de pago</div><table style="margin-bottom:5px;">' + filasPago + "</table>" : "";
   const obs = p.observaciones ? '<div style="border-top:1px dashed #ccc;padding:5px 0;font-size:9px;"><strong>Obs:</strong> ' + esc(p.observaciones) + "</div>" : "";
-  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(v.numero) + "</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:10px;width:" + ancho + ";color:#000;background:white;-webkit-print-color-adjust:exact;line-height:1.4;word-break:break-word;font-weight:bold;}table{width:100%;border-collapse:collapse;}.sep{border:none;border-top:2px solid #000;width:100%;margin:5px 0;display:block;}@media print{@page{margin:0;size:" + ancho + " auto;}body{width:" + ancho + ";margin:0;padding:0 3mm 0 0;}}</style></head><body>" +
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(nroT) + "</title>" + estiloPapel(fmtT) + "</head><body>" +
     logo + '<div style="text-align:center;padding:8px 0 5px;"><div style="font-size:13px;font-weight:bold;">' + esc(d.negocio || "MI NEGOCIO") + "</div><div>RIF: " + esc(cfg.rif || "J-00000000") + "</div>" + (cfg.direccion ? "<div>" + esc(cfg.direccion) + "</div>" : "") + "<div>Teléfono: " + esc(cfg.telefono || "") + "</div></div>" +
     '<hr class="sep"><table style="margin-bottom:5px;font-size:10px;font-weight:bold;"><tr><td></td><td style="text-align:right;">' + per.join("<br>") + "</td></tr>" +
-    "<tr><td>" + (esGen ? "" : esc(p.clienteNombre)) + '</td><td style="text-align:right;">' + esc(cfg.nombreDoc) + " N°: " + esc(v.numero) + "</td></tr>" +
+    "<tr><td>" + (esGen ? "" : esc(p.clienteNombre)) + '</td><td style="text-align:right;">' + esc(cfg.nombreDoc) + " N°: " + esc(nroT) + "</td></tr>" +
     "<tr><td>" + (esGen ? "" : esc(p.clienteCedula)) + '</td><td style="text-align:right;">Fecha: ' + esc(v.fecha) + "</td></tr>" +
     "<tr><td>" + (esGen ? "" : esc(p.clienteTelefono)) + '</td><td style="text-align:right;">Hora: ' + esc(String(v.creada).slice(11, 19)) + "</td></tr></table>" +
     '<hr class="sep"><table style="margin-bottom:5px;"><thead>' + (mostrarPU
@@ -1388,15 +1443,229 @@ function imprimirTicket(v){
   fr.srcdoc = html;
 }
 
+// ══ NÚMERO DE FACTURA DEL TICKET ══
+// El que sigue: el último del sistema (llega con los datos) o el más alto que ya usó este equipo.
+// Las ventas que el sistema rechazó para siempre (inválidas) no guardan número.
+function proximoNumero(){
+  let m = Number(S.datos && S.datos.ultimoNumero) || 0;
+  S.ventas.forEach(v => {
+    if (v.estado === "invalida") return;
+    m = Math.max(m, Number(v.numeroTicket) || 0, Number(v.numeroFactura) || 0);
+  });
+  return m + 1;
+}
+
+// ══ TAMAÑO DEL PAPEL ══
+function formatoTicket(){
+  const t = S.pref.tamTicket || "auto";
+  if (t === "80" || t === "58" || t === "carta") return t;
+  const f = ((S.datos || {}).impresion || {}).formato;
+  return f === "ticket58" ? "58" : f === "carta" ? "carta" : "80";
+}
+function estiloPapel(fmt){
+  const base = "*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Calibri,Arial,sans-serif;color:#000;background:white;-webkit-print-color-adjust:exact;line-height:1.4;word-break:break-word;font-weight:bold;}table{width:100%;border-collapse:collapse;}.sep{border:none;border-top:2px solid #000;width:100%;margin:5px 0;display:block;}";
+  if (fmt === "carta") return "<style>" + base + "body{font-size:12px;width:180mm;max-width:100%;margin:0 auto;padding:6mm 0;}@media print{@page{size:letter;margin:12mm;}body{padding:0;}}</style>";
+  const a = fmt === "58" ? "58mm" : "80mm";
+  return "<style>" + base + "body{font-size:10px;width:" + a + ";}@media print{@page{margin:0;size:" + a + " auto;}body{width:" + a + ";margin:0;padding:0 3mm 0 0;}}</style>";
+}
+function imprimirHTML(html){
+  const w = window.open("", "_blank", "width=420,height=700");
+  if (w) {
+    w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => { try { w.print(); } catch (e) {} }, 500);
+    setTimeout(() => { try { w.close(); } catch (e) {} }, 2500);
+    return;
+  }
+  let fr = $("frImprimir");
+  if (!fr) { fr = document.createElement("iframe"); fr.id = "frImprimir"; fr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;"; document.body.appendChild(fr); }
+  fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) {} };
+  fr.srcdoc = html;
+}
+
+// ══ TURNO: el cajero entra con su PIN y dice con cuánto efectivo arranca ══
+let _turnoSel = null;
+const _pinFallas = {};   // id del cajero → { n, hasta }
+function cajerosTurno(){
+  const l = (S.datos && S.datos.cajeros) || [];
+  const idCaja = Number(S.datos && S.datos.cajero && S.datos.cajero.id) || 0;
+  return l.slice().sort((a, b) => (b.id === idCaja) - (a.id === idCaja) || String(a.nombre).localeCompare(String(b.nombre)));
+}
+function pintarTurno(){
+  const box = $("turnoCuerpo"); if (!box || !S.datos) return;
+  const l = cajerosTurno(), idCaja = Number(S.datos.cajero && S.datos.cajero.id) || 0;
+  if (!l.length || !l.some(c => c.pin)) {
+    box.innerHTML = '<div class="m-txt" style="line-height:1.55;">' + (l.length ? "Ningún cajero tiene <b>PIN</b> todavía." : "No hay cajeros activos.") +
+      '<br><br>En el sistema: <b>Configuración → Cajas y vendedores</b>' + (l.length ? ", toca <b>🔢 PIN</b> en cada cajero" : ", crea los cajeros y ponles su <b>🔢 PIN</b>") +
+      '. Después, aquí con internet, toca <b>🔄 Actualizar datos</b>.</div><div style="margin-top:14px;"><button type="button" class="btn green" onclick="actualizarDatos(this)">🔄 Actualizar datos</button></div>';
+    return;
+  }
+  box.innerHTML = '<div class="m-txt" style="color:var(--text-dim);font-size:13px;">¿Quién está en la caja?</div><div class="cj-grid">' +
+    l.map(c => '<button type="button" class="cj-btn' + (_turnoSel === c.id ? " sel" : "") + '"' + (c.pin ? "" : " disabled") + ' onclick="elegirCajero(' + c.id + ')">' + esc(c.nombre) +
+      "<small>" + (c.pin ? (c.id === idCaja ? "Cajero de esta caja" : "&nbsp;") : "Sin PIN") + "</small></button>").join("") + "</div>" +
+    '<div id="turnoForm" class="' + (_turnoSel ? "" : "oculto") + '">' +
+      '<label class="lbl" for="tPin">PIN de <span id="tPinNom"></span></label><input class="inp" id="tPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="4 a 6 números">' +
+      '<div class="cie-tit">Fondo de caja (efectivo con que arranca la gaveta)</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label class="lbl" for="tFondoBs" style="margin-top:0;">Efectivo Bs</label><input class="inp" id="tFondoBs" type="number" inputmode="decimal" min="0" step="any" placeholder="Bs (vacío = 0)"></div>' +
+      '<div><label class="lbl" for="tFondoUsd" style="margin-top:0;">Efectivo $</label><input class="inp" id="tFondoUsd" type="number" inputmode="decimal" min="0" step="any" placeholder="$ (vacío = 0)"></div></div>' +
+      '<div class="m-btns"><button type="button" class="btn green" id="btnAbrirTurno" onclick="abrirTurno(this)">🔓 Abrir turno</button></div>' +
+    "</div>";
+  if (_turnoSel) { const c = l.find(x => x.id === _turnoSel); $("tPinNom").textContent = c ? c.nombre : ""; }
+  $("tPin") && $("tPin").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("tFondoBs").focus(); } });
+}
+function elegirCajero(id){
+  _turnoSel = id; pintarTurno();
+  setTimeout(() => { const i = $("tPin"); if (i) i.focus(); }, 30);
+}
+async function abrirTurno(btn){
+  const c = cajerosTurno().find(x => x.id === _turnoSel);
+  if (!c || !c.pin) return;
+  const f = _pinFallas[c.id] || { n: 0, hasta: 0 };
+  if (Date.now() < f.hasta) { aviso({ icono: "⏳", titulo: "Espera un momento", html: "Hubo 5 PIN equivocados para <b>" + esc(c.nombre) + "</b>. Espera un minuto y vuelve a intentar." }); return; }
+  const pin = $("tPin").value.trim();
+  if (!/^\d{4,6}$/.test(pin)) { aviso({ icono: "🔢", titulo: "Falta el PIN", html: "Escribe tu PIN de 4 a 6 números." }); return; }
+  btnOcupado(btn, "Revisando…");
+  const h = await sha256hex(c.pin.salt + pin);
+  btnLibre(btn);
+  if (h !== c.pin.hash) {
+    f.n++; if (f.n >= 5) { f.hasta = Date.now() + 60000; f.n = 0; }
+    _pinFallas[c.id] = f;
+    $("tPin").value = "";
+    aviso({ icono: "🔢", titulo: "PIN incorrecto", html: "Ese no es el PIN de <b>" + esc(c.nombre) + "</b>. Vuelve a intentar." + (f.hasta > Date.now() ? "<br><br>Fueron 5 intentos: espera un minuto." : "") });
+    return;
+  }
+  _pinFallas[c.id] = { n: 0, hasta: 0 };
+  const ahora = new Date();
+  S.turno = { id: "T-" + (S.datos.equipo || "EQ") + "-" + ahoraTxt(ahora).replace(/\D/g, "").slice(0, 12) + "-" + uuid().slice(0, 4),
+              cajeroId: c.id, cajeroNombre: c.nombre, apertura: ahoraTxt(ahora),
+              fondoBs: r2(Number($("tFondoBs").value) || 0), fondoUsd: r2(Number($("tFondoUsd").value) || 0) };
+  await kvSet("turno", S.turno);
+  _turnoSel = null;
+  toast("✅ Turno abierto: " + c.nombre);
+  pintarCabecera();
+  irA("vender");
+}
+
+// ══ CIERRE DE TURNO ══
+function esEfectivo(p){ const m = metodoDe(p.metodo) || { metodo: p.metodo, tipo: p.tipo }; return pguTipoDe(m) === "efectivo"; }
+function resumenTurno(t){
+  const vs = S.ventas.filter(v => v.turno === t.id && v.estado !== "invalida");
+  const met = {};
+  let totalUsd = 0, totalBs = 0, credito = 0, desc = 0, sinSubir = 0;
+  const sumar = (p, m) => {
+    const k = p.metodo + "|" + p.tipo;
+    const x = met[k] = met[k] || { metodo: p.metodo, tipo: p.tipo, neto: 0, desc: pguDesc(metodoDe(p.metodo) || { metodo: p.metodo, tipo: p.tipo }), efectivo: esEfectivo(p) };
+    x.neto = r2(x.neto + m);
+  };
+  vs.forEach(v => {
+    totalUsd += Number(v.total) || 0; totalBs += Number(v.totalBs) || 0;
+    const sinDesc = totales(v.items.map(i => ({ cantidad: i.cantidad, base: i.precio, iva: i.iva })), { tipo: "ninguno" }).total;
+    desc += Math.max(0, sinDesc - (Number(v.total) || 0));
+    if (v.estado !== "subida") sinSubir++;
+    (v.pago.pagos || []).forEach(p => { if (p.tipo === "CRED") credito += Number(p.monto) || 0; else sumar(p, Number(p.monto) || 0); });
+    (v.pago.vuelto || []).forEach(p => sumar(p, -(Number(p.monto) || 0)));
+  });
+  const metodos = Object.values(met).sort((a, b) => (a.tipo === b.tipo ? 0 : a.tipo === "BS" ? -1 : 1) || a.desc.localeCompare(b.desc));
+  const efBs = metodos.filter(m => m.efectivo && m.tipo === "BS").reduce((s, m) => s + m.neto, 0);
+  const efUsd = metodos.filter(m => m.efectivo && m.tipo === "USD").reduce((s, m) => s + m.neto, 0);
+  return { ventas: vs.length, totalUsd: r2(totalUsd), totalBs: r2(totalBs), credito: r2(credito), descuentos: r2(desc), sinSubir,
+           metodos, efBsVentas: r2(efBs), efUsdVentas: r2(efUsd),
+           efBsEsperado: r2((Number(t.fondoBs) || 0) + efBs), efUsdEsperado: r2((Number(t.fondoUsd) || 0) + efUsd) };
+}
+function irCierre(){
+  if (!S.turno) return;
+  if (F.items.length || P) { aviso({ icono: "🧾", titulo: "Hay una venta a medias", html: "Termina la venta (o vacíala con 🗑️) antes de cerrar el turno." }); return; }
+  mostrarVista("cierre"); pintarCierre();
+}
+function difHTML(d){
+  if (Math.abs(d) < 0.005) return '<span class="dif-ok">✅ Cuadra</span>';
+  return d > 0 ? '<span class="dif-sob">Sobra ' + fmt(d) + "</span>" : '<span class="dif-mal">Falta ' + fmt(-d) + "</span>";
+}
+function pintarCierre(){
+  const t = S.turno, R = resumenTurno(t);
+  const filasMet = R.metodos.map(m => "<tr><td>" + esc(m.desc) + '</td><td class="r">' + (m.tipo === "BS" ? "Bs " : "$") + fmt(m.neto) + "</td></tr>").join("") +
+    (R.credito ? '<tr><td>📝 A crédito (no entra a caja)</td><td class="r">$' + fmt(R.credito) + "</td></tr>" : "");
+  $("cierreCard").innerHTML =
+    '<div class="card-tit">🔒 Cerrar turno</div>' +
+    '<div class="m-txt"><b>' + esc(t.cajeroNombre) + "</b> · desde " + fechaCorta(t.apertura) + " " + horaDe(t.apertura) + "</div>" +
+    '<div class="res" style="margin-top:10px;"><div><span>Ventas</span><b>' + R.ventas + '</b></div><div><span>Total</span><b>Bs ' + fmt(R.totalBs) + '</b><span style="text-transform:none;">$' + fmt(R.totalUsd) + " BCV</span></div>" +
+    (R.descuentos ? '<div><span>Descuentos</span><b>$' + fmt(R.descuentos) + "</b></div>" : "") + "</div>" +
+    (R.sinSubir ? '<div class="banner av" style="margin:0 0 10px;">⏳ ' + R.sinSubir + " venta" + (R.sinSubir > 1 ? "s" : "") + " de este turno todavía no " + (R.sinSubir > 1 ? "están" : "está") + " en el sistema. Puedes cerrar igual: se suben solas cuando haya internet.</div>" : "") +
+    '<div class="cie-tit">Por método (cobrado menos vuelto)</div><table class="cie-tabla">' + (filasMet || '<tr><td colspan="2" style="color:var(--text-dim);">Sin ventas en este turno.</td></tr>') + "</table>" +
+    '<div class="cie-tit">Efectivo en la gaveta</div>' +
+    '<table class="cie-tabla"><tr><td></td><td class="r">Bs</td><td class="r">$</td></tr>' +
+    '<tr><td>Fondo inicial</td><td class="r">' + fmt(t.fondoBs) + '</td><td class="r">' + fmt(t.fondoUsd) + "</td></tr>" +
+    '<tr><td>+ Efectivo del turno (menos vuelto)</td><td class="r">' + fmt(R.efBsVentas) + '</td><td class="r">' + fmt(R.efUsdVentas) + "</td></tr>" +
+    '<tr><td><b>= Debe haber</b></td><td class="r">' + fmt(R.efBsEsperado) + '</td><td class="r">' + fmt(R.efUsdEsperado) + "</td></tr></table>" +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">' +
+      '<div><label class="lbl" for="cBs">Contado Bs</label><input class="inp" id="cBs" type="number" inputmode="decimal" min="0" step="any" placeholder="Cuenta el efectivo en Bs" oninput="pintarDifCierre()"><div id="cBsDif" style="font-size:13px;font-weight:800;margin-top:4px;"></div></div>' +
+      '<div><label class="lbl" for="cUsd">Contado $</label><input class="inp" id="cUsd" type="number" inputmode="decimal" min="0" step="any" placeholder="Cuenta el efectivo en $" oninput="pintarDifCierre()"><div id="cUsdDif" style="font-size:13px;font-weight:800;margin-top:4px;"></div></div>' +
+    "</div>" +
+    '<label class="lbl" for="cObs">Observación (opcional)</label><input class="inp" id="cObs" maxlength="200" placeholder="Ej. se pagó al proveedor de pan desde la gaveta">' +
+    '<div class="m-btns"><button type="button" class="btn" onclick="irA(\'vender\')">Volver a vender</button><button type="button" class="btn naranja" id="btnCerrarTurno" onclick="cerrarTurno(this)">🔒 Cerrar turno</button></div>';
+  $("cierreCard")._R = R;
+}
+function pintarDifCierre(){
+  const R = $("cierreCard")._R; if (!R) return;
+  const b = $("cBs").value, u = $("cUsd").value;
+  $("cBsDif").innerHTML = b === "" ? "" : difHTML(r2(Number(b) - R.efBsEsperado));
+  $("cUsdDif").innerHTML = u === "" ? "" : difHTML(r2(Number(u) - R.efUsdEsperado));
+}
+async function cerrarTurno(btn){
+  const t = S.turno, R = resumenTurno(t);
+  const b = $("cBs").value, u = $("cUsd").value;
+  if (b === "" || u === "") { aviso({ icono: "💵", titulo: "Falta el conteo", html: "Cuenta el efectivo de la gaveta y escribe cuánto hay en <b>Bs</b> y en <b>$</b> (si no hay, escribe 0)." }); return; }
+  const dBs = r2(Number(b) - R.efBsEsperado), dUsd = r2(Number(u) - R.efUsdEsperado);
+  const txtDif = (Math.abs(dBs) >= 0.005 || Math.abs(dUsd) >= 0.005)
+    ? "<br><br>⚠️ El efectivo no cuadra: Bs " + (dBs >= 0 ? "+" : "") + fmt(dBs) + " · $" + (dUsd >= 0 ? "+" : "") + fmt(dUsd) + ". Queda anotado en el cierre." : "<br><br>✅ El efectivo cuadra.";
+  if (!await confirmar({ icono: "🔒", titulo: "Cerrar el turno de " + t.cajeroNombre, ok: "Sí, cerrar turno", colorOk: "naranja", html: "Se cierra el turno con " + R.ventas + " venta" + (R.ventas === 1 ? "" : "s") + " por Bs " + fmt(R.totalBs) + "." + txtDif })) return;
+  btnOcupado(btn, "Cerrando…");
+  const c = Object.assign({ id: t.id, cajeroId: t.cajeroId, cajeroNombre: t.cajeroNombre, apertura: t.apertura, cierre: ahoraTxt(),
+    fondoBs: t.fondoBs, fondoUsd: t.fondoUsd, efBsContado: r2(Number(b)), efUsdContado: r2(Number(u)), efBsDif: dBs, efUsdDif: dUsd,
+    obs: $("cObs").value.trim(), caja: S.datos.caja, equipo: S.datos.equipo, estado: "por_subir", msg: "" }, R);
+  c.metodos = R.metodos.map(m => ({ metodo: m.metodo, tipo: m.tipo, desc: m.desc, neto: m.neto, efectivo: m.efectivo }));
+  S.cierres.push(c);
+  try { await kvSet("cierres", S.cierres); await kvSet("turno", null); }
+  catch (e) { btnLibre(btn); S.cierres.pop(); aviso({ icono: "❌", titulo: "No se cerró el turno", html: "El equipo no pudo guardar el cierre (" + esc(e.message) + "). Vuelve a intentar." }); return; }
+  S.turno = null;
+  btnLibre(btn);
+  pintarCabecera(); pintarEstado();
+  const r = await modal({ icono: "✅", titulo: "Turno cerrado", html: '<div class="m-txt">Cierre de <b>' + esc(c.cajeroNombre) + "</b> guardado." + (S.online ? " Se sube al sistema en un momento." : " Se sube solo al sistema cuando haya internet.") + "</div>",
+    botones: [{ txt: "Sin imprimir", v: false }, { txt: "🖨️ Imprimir cierre", v: true, cls: "green" }] });
+  if (r) imprimirHTML(htmlCierre(c));
+  sincronizar();
+  irA("vender");
+}
+function htmlCierre(c){
+  const d = S.datos || {}, cfg = d.impresion || {}, fmtT = formatoTicket();
+  const fila = (a, b) => "<tr><td>" + a + '</td><td style="text-align:right;">' + b + "</td></tr>";
+  const dif = x => Math.abs(x) < 0.005 ? "CUADRA" : (x > 0 ? "SOBRA " : "FALTA ") + fmt(Math.abs(x));
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre ' + esc(c.cajeroNombre) + "</title>" + estiloPapel(fmtT) + "</head><body>" +
+    '<div style="text-align:center;padding:8px 0 5px;"><div style="font-size:13px;">' + esc(d.negocio || "") + "</div><div>CIERRE DE CAJA</div><div>Caja " + esc(c.caja || d.caja) + " · equipo " + esc(c.equipo || d.equipo) + "</div></div>" +
+    '<hr class="sep"><table>' + fila("Cajero:", esc(c.cajeroNombre)) + fila("Apertura:", esc(c.apertura)) + fila("Cierre:", esc(c.cierre)) + fila("Ventas:", c.ventas) +
+    fila("Total:", "Bs " + fmt(c.totalBs)) + fila("Total $ BCV:", "$" + fmt(c.totalUsd)) + (c.descuentos ? fila("Descuentos:", "$" + fmt(c.descuentos)) : "") + "</table>" +
+    '<hr class="sep"><div style="font-size:9px;text-transform:uppercase;margin-bottom:3px;">Por método (menos vuelto)</div><table>' +
+    (c.metodos || []).map(m => fila(esc(String(m.desc || m.metodo).replace(/^[^\wÁÉÍÓÚÑáéíóúñ]+\s*/, "")), (m.tipo === "BS" ? "Bs " : "$") + fmt(m.neto))).join("") + (c.credito ? fila("A crédito:", "$" + fmt(c.credito)) : "") + "</table>" +
+    '<hr class="sep"><div style="font-size:9px;text-transform:uppercase;margin-bottom:3px;">Efectivo Bs</div><table>' +
+    fila("Fondo:", fmt(c.fondoBs)) + fila("Del turno:", fmt(c.efBsVentas)) + fila("Debe haber:", fmt(c.efBsEsperado)) + fila("Contado:", fmt(c.efBsContado)) + fila("Resultado:", dif(c.efBsDif)) + "</table>" +
+    '<hr class="sep"><div style="font-size:9px;text-transform:uppercase;margin-bottom:3px;">Efectivo $</div><table>' +
+    fila("Fondo:", fmt(c.fondoUsd)) + fila("Del turno:", fmt(c.efUsdVentas)) + fila("Debe haber:", fmt(c.efUsdEsperado)) + fila("Contado:", fmt(c.efUsdContado)) + fila("Resultado:", dif(c.efUsdDif)) + "</table>" +
+    (c.sinSubir ? '<hr class="sep"><div>Ventas sin subir al cerrar: ' + c.sinSubir + "</div>" : "") +
+    (c.obs ? '<hr class="sep"><div>Obs: ' + esc(c.obs) + "</div>" : "") +
+    '<div style="margin-top:28px;border-top:1px solid #000;text-align:center;padding-top:3px;">Firma del cajero</div>' +
+    '<div style="text-align:center;margin-top:8px;font-size:9px;">Impreso ' + esc(ahoraTxt()) + "</div></body></html>";
+}
+
 // ══ SUBIR LAS VENTAS AL SISTEMA ══
 function datosParaSubir(v){
-  return { id: v.id, numero: v.numero, creada: v.creada, fecha: v.fecha, tasas: v.tasas, items: v.items, pago: v.pago };
+  return { id: v.id, numero: v.numero, creada: v.creada, fecha: v.fecha, tasas: v.tasas, items: v.items, pago: v.pago,
+           numeroFactura: v.numeroTicket || 0, turno: v.turno || "" };
 }
 async function sincronizar(manual){
   if (!S.eq || !S.datos || S.sincronizando) return { subidas: 0 };
   if (S.permisoMal && !manual) return { subidas: 0 };
-  const cola = S.ventas.filter(v => v.estado === "por_subir").sort((a, b) => String(a.creada).localeCompare(String(b.creada)));
-  if (!cola.length) { if (manual) await actualizarDatos(null, true); return { subidas: 0 }; }
+  // De la más vieja a la más nueva (y a igual hora, por número de ticket)
+  const cola = S.ventas.filter(v => v.estado === "por_subir").sort((a, b) => String(a.creada).localeCompare(String(b.creada)) || (Number(a.numeroTicket) || 0) - (Number(b.numeroTicket) || 0));
+  if (!cola.length) { await subirCierres(); if (manual) await actualizarDatos(null, true); return { subidas: 0 }; }
   S.sincronizando = true; pintarEstado();
   let subidas = 0, cortado = "";
   try {
@@ -1412,10 +1681,12 @@ async function sincronizar(manual){
         subidas++;
       } else if (r && r.estado === "procesando") {
         v.msg = r.msg || "Se está subiendo desde otro lado.";
+        await ventaPut(v); cortado = ""; break;   // se espera: las que siguen no se adelantan
       } else if (r && r.estado === "invalida") {
         v.estado = "invalida"; v.msg = r.msg || "El sistema rechazó la venta.";
       } else if (r && r.reintentar) {
         v.msg = r.msg || "El sistema estaba ocupado.";
+        await ventaPut(v); break;                 // se vuelve a intentar en orden, empezando por esta
       } else {
         v.estado = "pendiente"; v.msg = (r && r.msg) || "El sistema no la pudo registrar.";
       }
@@ -1428,8 +1699,17 @@ async function sincronizar(manual){
     pintarEstado(); pintarBanners();
     if (S.vista === "ventas") pintarVentas();
   }
-  if (subidas && S.online) await actualizarDatos(null, true);   // existencias al día
+  if (!cortado) await subirCierres();
+  if (subidas && S.online) await actualizarDatos(null, true);   // existencias y último número de factura al día
   return { subidas, cortado };
+}
+async function subirCierres(){
+  for (const c of S.cierres.filter(x => x.estado === "por_subir")) {
+    let r;
+    try { r = await llamar("vsi_cierre", { cierre: c }, 60000); } catch (e) { return; }
+    if (r && r.ok) { c.estado = "subido"; c.msg = ""; } else { c.msg = (r && r.msg) || "No se pudo subir."; if (r && r.codigo === "PERMISO") return; }
+    await kvSet("cierres", S.cierres);
+  }
 }
 async function subirAhora(btn){
   btnOcupado(btn, "Subiendo…");
@@ -1451,7 +1731,7 @@ async function reintentar(id, btn){
 // ══ VENTAS DEL EQUIPO ══
 function filtrarVentas(f){ S.filtro = f; document.querySelectorAll("#filtros button").forEach(b => b.classList.toggle("on", b.dataset.f === f)); pintarVentas(); }
 function estadoHTML(v){
-  if (v.estado === "subida") return (v.avisos && v.avisos.length) ? '<span class="est av">⚠️ Subida #' + esc(v.numeroFactura) + " · con avisos</span>" : '<span class="est sub">✅ Subida #' + esc(v.numeroFactura) + "</span>";
+  if (v.estado === "subida") return (v.avisos && v.avisos.length) ? '<span class="est av">⚠️ En el sistema #' + esc(v.numeroFactura) + " · con avisos</span>" : '<span class="est sub">✅ En el sistema #' + esc(v.numeroFactura) + "</span>";
   if (v.estado === "por_subir") return '<span class="est por">⏳ Por subir</span>';
   return '<span class="est mal">❌ No se registró</span>';
 }
@@ -1473,6 +1753,23 @@ function pintarVentas(){
   const mets = Object.keys(porMet);
   if (mets.length) h += '<div style="grid-column:1/-1;"><span>Hoy por método (menos el vuelto)</span>' + mets.map(k => { const [m, t] = k.split("|"); return '<div class="met"><span style="text-transform:none;font-weight:600;color:var(--text);font-size:13px;">' + esc(m) + "</span><b>" + (t === "BS" ? "Bs " : "$") + fmt(porMet[k]) + "</b></div>"; }).join("") + "</div>";
   $("resumen").innerHTML = h;
+  // Por cajero (hoy)
+  const porCj = {};
+  deHoy.forEach(v => { const k = v.pago.cajeroNombre || "Sin cajero"; const x = porCj[k] = porCj[k] || { n: 0, bs: 0, usd: 0 }; x.n++; x.bs += Number(v.totalBs) || 0; x.usd += Number(v.total) || 0; });
+  const cjs = Object.keys(porCj);
+  $("porCajero").innerHTML = cjs.length ? '<div class="card" style="margin-bottom:10px;"><div class="card-tit">🧾 Hoy por cajero</div><table class="cie-tabla">' +
+    cjs.map(k => "<tr><td><b>" + esc(k) + "</b> · " + porCj[k].n + " venta" + (porCj[k].n === 1 ? "" : "s") + '</td><td class="r">Bs ' + fmt(porCj[k].bs) + ' <span style="color:var(--text-dim);font-weight:600;">· $' + fmt(porCj[k].usd) + "</span></td></tr>").join("") + "</table></div>" : "";
+  // Turnos
+  const tl = S.cierres.slice().reverse().slice(0, 20);
+  let th = "";
+  if (S.turno) { const R = resumenTurno(S.turno); th += '<tr><td>🟢 <b>' + esc(S.turno.cajeroNombre) + "</b> · abierto desde " + fechaCorta(S.turno.apertura) + " " + horaDe(S.turno.apertura) + " · " + R.ventas + ' ventas</td><td class="r">Bs ' + fmt(R.totalBs) + "</td></tr>"; }
+  tl.forEach((c, k) => {
+    const dif = (Math.abs(c.efBsDif) < 0.005 && Math.abs(c.efUsdDif) < 0.005) ? '<span class="dif-ok">cuadra</span>' : '<span class="dif-mal">dif. Bs ' + fmt(c.efBsDif) + " · $" + fmt(c.efUsdDif) + "</span>";
+    th += "<tr><td>🔒 <b>" + esc(c.cajeroNombre) + "</b> · " + fechaCorta(c.apertura) + " " + horaDe(c.apertura) + "–" + horaDe(c.cierre) + " · " + c.ventas + " ventas · " + dif +
+      (c.estado === "subido" ? "" : ' · <span style="color:var(--blue);">⏳ por subir</span>') + '</td><td class="r">Bs ' + fmt(c.totalBs) +
+      ' <button type="button" class="btn sm" onclick="imprimirCierreN(' + (S.cierres.length - 1 - k) + ')">🖨️</button></td></tr>';
+  });
+  $("turnosLista").innerHTML = th ? '<div class="card" style="margin-bottom:10px;"><div class="card-tit">🔒 Turnos</div><table class="cie-tabla">' + th + "</table></div>" : "";
   $("btnSubir").classList.toggle("oculto", !c.por && !c.mal);
   let lst = S.ventas.slice().sort((a, b) => String(b.creada).localeCompare(String(a.creada)));
   if (S.filtro === "hoy") lst = lst.filter(v => v.fecha === hoy);
@@ -1489,7 +1786,9 @@ function pintarVentas(){
     if (v.estado === "subida" && v.avisos && v.avisos.length) msg = '<div class="vt-msg av"><b>Avisos del sistema:</b><br>' + v.avisos.map(esc).join("<br>") + "</div>";
     if ((v.estado === "pendiente" || v.estado === "invalida") && v.msg) msg = '<div class="vt-msg mal"><b>Por qué no se registró:</b><br>' + esc(v.msg) + "<br><br>La venta sigue guardada en este equipo. Cuando el administrador lo corrija en el sistema, toca <b>Reintentar</b>.</div>";
     if (v.estado === "por_subir" && v.msg) msg = '<div class="vt-msg av">Último intento: ' + esc(v.msg) + "</div>";
-    return '<div class="vt-item" id="vt_' + v.id + '"><div class="vt-cab" onclick="this.parentNode.classList.toggle(\'abierto\')"><div style="min-width:0;"><div class="n">' + esc(v.numero) + " · " + fechaCorta(v.fecha) + " " + horaDe(v.creada) + "</div>" +
+    const nroL = v.numeroFactura ? "#" + v.numeroFactura : (v.numeroTicket ? "#" + v.numeroTicket : v.numero);
+    if (v.numeroTicket && v.numeroFactura && String(v.numeroTicket) !== String(v.numeroFactura)) msg = '<div class="vt-msg av">⚠️ El ticket salió con el #' + esc(v.numeroTicket) + " y quedó registrada con el <b>#" + esc(v.numeroFactura) + "</b>. Reimprímelo si el cliente lo necesita.</div>" + msg;
+    return '<div class="vt-item" id="vt_' + v.id + '"><div class="vt-cab" onclick="this.parentNode.classList.toggle(\'abierto\')"><div style="min-width:0;"><div class="n">' + esc(nroL) + " · " + fechaCorta(v.fecha) + " " + horaDe(v.creada) + (v.pago.cajeroNombre ? ' <span style="color:var(--text-dim);font-weight:600;">· ' + esc(v.pago.cajeroNombre) + "</span>" : "") + "</div>" +
       '<div class="s">' + esc(p.clienteNombre || "Genérico") + (p.clienteCedula ? " · " + esc(p.clienteCedula) : "") + "</div>" + estadoHTML(v) + "</div>" +
       '<div class="m">Bs ' + fmt(v.totalBs) + '<div style="font-size:11px;color:var(--text-dim);font-weight:600;">$' + fmt(v.total) + "</div></div></div>" +
       '<div class="vt-det">' + msg + "<table>" + items + "</table><table>" + pagos + "</table>" +
@@ -1498,6 +1797,7 @@ function pintarVentas(){
       ((v.estado === "pendiente" || v.estado === "invalida") ? '<button type="button" class="btn sm green" onclick="reintentar(\'' + v.id + '\',this)">🔁 Reintentar</button>' : "") + "</div></div></div>";
   }).join("");
 }
+function imprimirCierreN(i){ const c = S.cierres[i]; if (c) imprimirHTML(htmlCierre(c)); }
 function imprimirPorId(id){ const v = S.ventas.find(x => x.id === id); if (v) imprimirTicket(v); }
 function descargarRespaldo(){
   const d = S.datos || {};
@@ -1519,10 +1819,10 @@ function pintarAjustes(){
     "<span>Productos</span><b>" + (d.productos || []).length + "</b><span>Clientes</span><b>" + (d.clientes || []).length + "</b>" +
     "<span>Clave sin internet</span><b>" + (d.claveSinInternet ? "✅ puesta" : "⚠️ no puesta") + "</b>";
   $("infoTasas").innerHTML = "<span>BCV</span><b>Bs " + fmt(t.bcv) + "</b><span>Divisas ($ en efectivo)</span><b>" + (t.div > 0 ? "Bs " + fmt(t.div) : "—") + "</b><span>De</span><b>" + fechaCorta(t.fecha) + (t.origen === "manual" ? " (puesta a mano)" : " (del sistema)") + "</b>";
-  $("chkDosCopias").checked = !!S.pref.dosCopias; $("chkClaro").checked = !!S.pref.claro;
+  $("chkDosCopias").checked = !!S.pref.dosCopias; $("chkClaro").checked = !!S.pref.claro; $("selTamTicket").value = S.pref.tamTicket || "auto";
 }
 async function guardarPref(){
-  S.pref.dosCopias = $("chkDosCopias").checked; S.pref.claro = $("chkClaro").checked;
+  S.pref.dosCopias = $("chkDosCopias").checked; S.pref.claro = $("chkClaro").checked; S.pref.tamTicket = $("selTamTicket").value;
   aplicarTema();
   try { await kvSet("pref", S.pref); toast("✅ Cambios guardados"); } catch (e) {}
 }
