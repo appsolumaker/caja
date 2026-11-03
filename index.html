@@ -150,6 +150,25 @@ select.inp{padding:8px 10px;}
 .chip.usd{border-color:rgba(0,232,122,.3);}
 .chip.cred{border-color:rgba(142,68,173,.45);}
 .chip.usado{opacity:.5;}
+/* Métodos de pago como en Ventas: una fila por TIPO (Pago Móvil, Punto…) y un botón por CUENTA */
+.pgu-mon-tit{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;margin:10px 0 6px;}
+.pgu-mon-tit.bs{color:#3498db;} .pgu-mon-tit.usd{color:var(--green);} .pgu-mon-tit.otros{color:var(--text-dim);}
+.pgu-cols{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;}
+.pgu-cols.una{grid-template-columns:1fr;}
+.pgu-fila{display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:5px 0;border-bottom:1px dashed var(--border);}
+.pgu-fila:last-child{border-bottom:none;}
+.pgu-fila.linea1{flex-direction:row;align-items:center;}
+.pgu-grp{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pgu-chips{display:flex;flex-wrap:wrap;gap:6px;min-width:0;}
+.pgu-chip{flex:1 1 auto;padding:8px 12px;font-size:13px;font-weight:800;border-radius:8px;background:var(--bg2);color:var(--text);border:1px solid var(--border);min-height:38px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pgu-chip.bs{border-color:rgba(52,152,219,.45);} .pgu-chip.bs:hover{background:rgba(52,152,219,.12);}
+.pgu-chip.usd{border-color:var(--border-g);} .pgu-chip.usd:hover{background:var(--green-dim);}
+.pgu-chip.cred{border-color:rgba(231,76,60,.45);flex:0 0 auto;} .pgu-chip.cred:hover{background:rgba(231,76,60,.10);}
+.pgu-chip.usado{opacity:.55;}
+.pgu-chip.on{background:rgba(231,76,60,.14);}
+.pgu-chip:disabled{opacity:.4;cursor:not-allowed;}
+@media (max-width:600px){.pgu-cols{grid-template-columns:1fr;}}
+.prod.sel{background:var(--green-dim);outline:1px solid var(--border-g);}
 .pl{border:1px solid var(--border);border-radius:9px;padding:9px;margin-top:8px;background:var(--bg2);}
 .pl.bs{border-left:3px solid #3498db;} .pl.usd{border-left:3px solid var(--green);} .pl.cred{border-left:3px solid #8e44ad;} .pl.vt{border-left:3px solid var(--amber);}
 .pl-cab{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;margin-bottom:6px;}
@@ -365,7 +384,7 @@ select.inp{padding:8px 10px;}
 //  Todo queda en este equipo (IndexedDB) hasta que el sistema confirma el número de factura.
 //  Solo tasaBin APAGADO: los Bs a tasa BCV y los $ a tasa Divisas (H9).
 // ══════════════════════════════════════════════════════════════
-const APP_VER = "1.1 · 3-11-2026";
+const APP_VER = "1.2 · 3-11-2026";
 const DB_NOMBRE = "cm_caja_sin_internet";
 const TOL = 0.011;   // un centavo, como el servidor (> 0,01)
 
@@ -707,7 +726,7 @@ function buscar(){
     let ex = "";
     if (p.tipo === "servicio") ex = '<span class="tag">SERVICIO</span>';
     else { const e = existenciaLocal(p); ex = '<span class="ex ' + (e <= 0 ? "cero" : e <= 5 ? "bajo" : "") + '">' + fmtCant(e) + "</span>"; }
-    return '<div class="prod" onclick="agregarDeLista(' + k + ')"><div style="min-width:0;"><div class="prod-nom">' + esc(p.nombre) + "</div>" +
+    return '<div class="prod" data-k="' + k + '" onclick="clicProducto(this,' + k + ')" ondblclick="agregarDeLista(' + k + ')"><div style="min-width:0;"><div class="prod-nom">' + esc(p.nombre) + "</div>" +
       '<div class="prod-sub">' + esc(p.codigoBarras || p.codigo) + (p.marca ? " · " + esc(p.marca) : "") + " " + ex + "</div></div>" +
       '<div class="prod-pr"><b>Bs ' + fmt(conIva * (t.bcv || 0)) + "</b><span>$" + fmt(conIva) + "</span></div></div>";
   }).join("");
@@ -722,6 +741,13 @@ function buscarEnter(){
   if (!lst.length) aviso({ icono: "🔎", titulo: "No está en la lista", html: "No hay ningún producto con «" + esc($("busca").value) + "» en los datos de este equipo. Si es nuevo, no se puede vender sin internet hasta que se actualicen los datos." });
 }
 function agregarDeLista(k){ const p = ($("listaProd")._lst || [])[k]; if (p) agregar(p); }
+// Como en Ventas: un clic marca el producto y el doble clic lo agrega. En pantalla táctil, un toque lo agrega.
+const ES_TACTIL = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+function clicProducto(el, k){
+  if (ES_TACTIL) { agregarDeLista(k); return; }
+  document.querySelectorAll("#listaProd .prod.sel").forEach(x => x.classList.remove("sel"));
+  el.classList.add("sel");
+}
 async function agregar(p){
   if (p.tipo !== "servicio") {
     const e = existenciaLocal(p);
@@ -790,7 +816,7 @@ function pintarFactura(){
     const conIva = i.base * (1 + i.iva / 100), tl = conIva * (Number(i.cantidad) || 0);
     return '<div class="linea"><div class="linea-nom">' + esc(i.nombre) + (i.manual ? '<span class="man">✏️ PRECIO MANUAL</span>' : "") + (i.tipo === "servicio" ? ' <span class="tag">SRV</span>' : "") + "</div>" +
       '<div class="linea-tot">Bs ' + fmt(tl * (t.bcv || 0)) + "<small>$" + fmt(tl) + "</small></div>" +
-      '<div class="linea-ctrl"><input class="inp" type="number" inputmode="decimal" min="0" step="any" placeholder="Cant." value="' + (i.cantidad === "" ? "" : i.cantidad) + '" oninput="cambiarCant(' + i.key + ',this.value)">' +
+      '<div class="linea-ctrl"><input class="inp" type="number" inputmode="decimal" min="0" step="any" placeholder="Cant." value="' + (i.cantidad === "" ? "" : i.cantidad) + '" oninput="cambiarCant(' + i.key + ',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();$(\'busca\').focus();}">' +
       '<span class="pu">× $' + fmt(conIva) + (i.iva ? " (IVA " + fmt(i.iva).replace(",00", "") + "%)" : "") + "</span></div>" +
       '<div class="linea-acc"><button type="button" class="ico" title="Precio manual" onclick="precioManual(' + i.key + ')">✏️</button><button type="button" class="ico" title="Quitar" onclick="quitarLinea(' + i.key + ')">✕</button></div></div>';
   }).join("");
@@ -1009,25 +1035,74 @@ function pgEstado(){
   const dif = r2(vale + cred - vtVale - N);
   return { cub: r2(cub), cred, cubT: r2(cubT), pend, pendX, vtCub: r2(vtCub), vtVale: r2(vtVale), queda, quedaX, vale: r2(vale), dif, hay: P.lineas.length > 0 || P.cred.on };
 }
+// ── Métodos de pago como en Ventas (mismo agrupado y mismas etiquetas) ──
+const PGU_GRUPOS = {
+  BS: [["pagomovil", "📱", "Pago Móvil"], ["punto", "💳", "Punto de venta"], ["biopago", "👆", "Biopago"], ["transferencia", "🏦", "Transferencia"], ["efectivo", "💵", "Efectivo Bs"], ["otro", "▫️", "Otros"]],
+  USD: [["efectivo", "💵", "Efectivo $"], ["zelle", "🌐", "Zelle"], ["binance", "🪙", "Binance"], ["paypal", "🅿️", "PayPal"], ["transferencia", "🏦", "Transferencia"], ["otro", "▫️", "Otros"]]
+};
+function pguNorm(s){ return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim(); }
+function pguTipoAuto(nombre, moneda){
+  const n = pguNorm(nombre);
+  if (moneda === "USD") {
+    if (/zelle/.test(n)) return "zelle";
+    if (/binance|usdt|cripto|crypto/.test(n)) return "binance";
+    if (/paypal/.test(n)) return "paypal";
+    if (/efectivo|cash|caja|billete/.test(n)) return "efectivo";
+    if (/transf|wire|ach/.test(n)) return "transferencia";
+    if (/divisa|dolar/.test(n)) return "efectivo";
+    return "otro";
+  }
+  if (/pago ?movil|p\.? ?movil|\bpm\b/.test(n)) return "pagomovil";
+  if (/biopago/.test(n)) return "biopago";
+  if (/punto|\bpos\b|tarjeta|debito/.test(n)) return "punto";
+  if (/transf/.test(n)) return "transferencia";
+  if (/efectivo|cash|caja|billete/.test(n)) return "efectivo";
+  return "otro";
+}
+function pguTipoDe(m){
+  const t = String((S.datos.tiposMetodo || {})[m.metodo] || "").toLowerCase();
+  return (PGU_GRUPOS[m.tipo] || []).some(g => g[0] === t) ? t : pguTipoAuto(m.metodo, m.tipo);
+}
+function pguGrupo(m){ return (PGU_GRUPOS[m.tipo] || []).find(g => g[0] === pguTipoDe(m)) || ["otro", "▫️", "Otros"]; }
+function pguCuentaNombre(m){ const id = String((S.datos.mapeo || {})[m.metodo] || "").trim(); return id ? String((S.datos.nombresCuentas || {})[id] || "") : ""; }
+// Botón = nombre de la cuenta. Si dos métodos del mismo tipo van a la misma cuenta, o no se sabe la cuenta: el nombre del método.
+function pguEtiqueta(m){
+  const cta = pguCuentaNombre(m); if (!cta) return m.metodo;
+  const t = pguTipoDe(m), id = (S.datos.mapeo || {})[m.metodo];
+  const rep = metodos().filter(x => x.tipo === m.tipo && pguTipoDe(x) === t && (S.datos.mapeo || {})[x.metodo] === id).length > 1;
+  return rep ? m.metodo : cta;
+}
+function pguDesc(m){
+  if (!m) return "";
+  const g = pguGrupo(m), e = pguEtiqueta(m);
+  return g[1] + " " + (pguNorm(e) === pguNorm(g[2]) || pguNorm(e).indexOf(pguNorm(g[2])) === 0 ? e : g[2] + " · " + e);
+}
+function metodoDe(nombre){ return metodos().find(x => x.metodo === nombre) || null; }
 function pgFilasMetodos(fn, usados, conCredito){
-  let h = "";
+  const cols = [];
   [["BS", "bs", "💙 En bolívares"], ["USD", "usd", "💚 En dólares"]].forEach(([mon, cls, tit]) => {
     const ms = metodos().map((m, i) => ({ m, i })).filter(o => o.m.tipo === mon);
     if (!ms.length) return;
-    h += '<div class="pg-col-tit ' + cls + '">' + tit + '</div><div class="chips">' + ms.map(o => {
-      const ok = o.m.conCuenta, us = usados.indexOf(o.m.metodo) >= 0;
-      return '<button type="button" class="chip ' + cls + (us ? " usado" : "") + '"' + (ok ? "" : " disabled") + ' onclick="' + fn + "(" + o.i + ')">' + esc(o.m.metodo) + (ok ? "" : " (sin cuenta)") + "</button>";
-    }).join("") + "</div>";
+    let h = '<div class="pgu-col"><div class="pgu-mon-tit ' + cls + '">' + tit + "</div>";
+    PGU_GRUPOS[mon].forEach(g => {
+      const del = ms.filter(o => pguTipoDe(o.m) === g[0]); if (!del.length) return;
+      h += '<div class="pgu-fila"><span class="pgu-grp">' + g[1] + " " + g[2] + '</span><div class="pgu-chips">' + del.map(o => {
+        const ok = o.m.conCuenta, us = usados.indexOf(o.m.metodo) >= 0;
+        return '<button type="button" class="pgu-chip ' + cls + (us ? " usado" : "") + '"' + (ok ? "" : " disabled") + ' title="' + esc(o.m.metodo + (ok ? "" : " — sin cuenta asociada")) + '" onclick="' + fn + "(" + o.i + ')">' + esc(pguEtiqueta(o.m)) + (ok ? "" : " (sin cuenta)") + "</button>";
+      }).join("") + "</div></div>";
+    });
+    cols.push(h + "</div>");
   });
-  if (conCredito && metodoCredito()) h += '<div class="pg-col-tit ot">Otros</div><div class="chips"><button type="button" class="chip cred" onclick="pgCredito()">' + (P.cred.on ? "✓ Crédito" : "📝 A crédito") + "</button></div>";
-  return h;
+  let html = '<div class="pgu-cols' + (cols.length < 2 ? " una" : "") + '">' + cols.join("") + "</div>";
+  if (conCredito && metodoCredito()) html += '<div class="pgu-mon-tit otros">Otros</div><div class="pgu-fila linea1"><span class="pgu-grp">📝 A crédito</span><div class="pgu-chips"><button type="button" class="pgu-chip cred' + (P.cred.on ? " on" : "") + '" onclick="pgCredito()">' + (P.cred.on ? "✓ Crédito" : "Crédito") + "</button></div></div>";
+  return html;
 }
 function pgPintarMetodos(){ $("pgMetodos").innerHTML = pgFilasMetodos("pgAgregar", P.lineas.map(l => l.metodo), true); }
 function pgPintarLineas(){
   let h = "";
   P.lineas.forEach(l => {
     const cls = l.tipo === "BS" ? "bs" : "usd";
-    h += '<div class="pl ' + cls + '"><div class="pl-cab"><span>' + (l.tipo === "BS" ? "💙 " : "💚 ") + esc(l.metodo) + '</span><button type="button" class="ico" onclick="pgQuitar(' + l.id + ')">✕</button></div>' +
+    h += '<div class="pl ' + cls + '"><div class="pl-cab"><span>' + esc(pguDesc(metodoDe(l.metodo) || { metodo: l.metodo, tipo: l.tipo })) + '</span><button type="button" class="ico" onclick="pgQuitar(' + l.id + ')">✕</button></div>' +
       '<div class="pl-cuerpo"><span class="mon">' + (l.tipo === "BS" ? "Bs" : "$") + '</span><input class="inp" type="number" inputmode="decimal" min="0" step="any" id="pgM_' + l.id + '" placeholder="' + (l.tipo === "BS" ? "Monto en Bs" : "Monto en $") + '" value="' + esc(l.monto) + '" oninput="pgMonto(' + l.id + ',this.value)"></div>' +
       '<div class="pl-eq" id="pgE_' + l.id + '"></div></div>';
   });
@@ -1042,7 +1117,7 @@ function pgPintarVuelto(){
   $("pgVuelto").classList.toggle("oculto", !P.vt.on);
   if (!P.vt.on) return;
   $("pgVtMetodos").innerHTML = P.vt.lineas.length >= 2 ? "" : pgFilasMetodos("pgVtAgregar", P.vt.lineas.map(v => v.metodo), false);
-  $("pgVtLineas").innerHTML = P.vt.lineas.map((v, k) => '<div class="pl vt"><div class="pl-cab"><span>💸 ' + esc(v.metodo) + '</span><button type="button" class="ico" onclick="pgVtQuitar(' + k + ')">✕</button></div>' +
+  $("pgVtLineas").innerHTML = P.vt.lineas.map((v, k) => '<div class="pl vt"><div class="pl-cab"><span>💸 ' + esc(pguDesc(metodoDe(v.metodo) || { metodo: v.metodo, tipo: v.tipo })) + '</span><button type="button" class="ico" onclick="pgVtQuitar(' + k + ')">✕</button></div>' +
     '<div class="pl-cuerpo"><span class="mon">' + (v.tipo === "BS" ? "Bs" : "$") + '</span><input class="inp" type="number" inputmode="decimal" min="0" step="any" id="pgVM_' + k + '" placeholder="Vuelto en ' + (v.tipo === "BS" ? "Bs" : "$") + '" value="' + esc(v.monto) + '" oninput="P.vt.lineas[' + k + '].monto=this.value;pgActualizar()"></div><div class="pl-eq" id="pgVE_' + k + '"></div></div>').join("");
 }
 function pgActualizar(){
@@ -1556,6 +1631,22 @@ let _toastT = null;
 function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(_toastT); _toastT = setTimeout(() => el.classList.remove("on"), 1800); }
 function btnOcupado(b, txt){ if (!b) return; if (b._txt == null) b._txt = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="sp"></span>' + esc(txt || "Procesando…"); }
 function btnLibre(b, txt){ if (!b) return; b.disabled = false; if (txt != null) b.innerHTML = txt; else if (b._txt != null) b.innerHTML = b._txt; b._txt = null; }
+// Lector de códigos en la PC: el lector "escribe" el código y da Enter. Si el cursor no está en ningún campo
+// (por ejemplo, después de tocar un botón), lo que llega va al buscador y el Enter agrega el producto.
+document.addEventListener("keydown", e => {
+  if (S.vista !== "vender" || !S.datos || e.ctrlKey || e.altKey || e.metaKey) return;
+  if (document.querySelector(".mfondo:not(.oculto)")) return;
+  const t = e.target, tag = (t && t.tagName) || "";
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
+  const b = $("busca");
+  if (e.key === "Enter") {
+    if (b.value.trim()) { e.preventDefault(); buscarEnter(); return; }
+    const sel = document.querySelector("#listaProd .prod.sel");   // Enter con un producto marcado: lo agrega
+    if (sel) { e.preventDefault(); agregarDeLista(Number(sel.dataset.k)); }
+    return;
+  }
+  if (e.key.length === 1 && e.key !== " ") { e.preventDefault(); b.focus(); b.value += e.key; buscar(); }
+});
 // Ningún campo numérico cambia con la rueda del ratón
 document.addEventListener("wheel", e => { const t = e.target; if (t && t.type === "number" && document.activeElement === t) t.blur(); }, { passive: true });
 // Antes de cerrar la pestaña: aviso si hay una venta a medias
