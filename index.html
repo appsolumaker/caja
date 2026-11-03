@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07090d">
+<title>Caja sin internet · ControlMaster</title>
+<style>
+:root{
+  --bg:#07090d;--bg2:#0d1117;--bg3:#131920;--bg4:#1a222c;
+  --green:#00e87a;--green-dim:rgba(0,232,122,0.10);
+  --border:rgba(255,255,255,0.08);--border-g:rgba(0,232,122,0.25);
+  --text:#f0f4f8;--text-dim:#8494a5;
+  --btn-txt:#07090d;
+  --red:#ff6b6b;--red-dim:rgba(255,107,107,0.14);
+  --amber:#e3b341;--amber-dim:rgba(227,179,65,0.14);
+  --blue:#85c1e9;--blue-dim:rgba(52,152,219,0.14);
+  --purple:#c39bd3;
+}
+body.light{
+  --bg:#eef1f5;--bg2:#ffffff;--bg3:#e7ebf0;--bg4:#dde3ea;
+  --green:#00a855;--green-dim:rgba(0,168,85,0.12);
+  --border:rgba(0,0,0,0.12);--border-g:rgba(0,160,90,0.45);
+  --text:#1a1d23;--text-dim:#5a6878;
+  --btn-txt:#ffffff;
+  --red:#b42323;--red-dim:rgba(200,50,50,0.12);
+  --amber:#8a5d00;--amber-dim:rgba(180,120,0,0.14);
+  --blue:#1a4a70;--blue-dim:rgba(26,82,118,0.12);
+  --purple:#6a1a7a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg2);color:var(--text);font-size:14px;-webkit-tap-highlight-color:transparent;}
+input,select,button,textarea{font-family:inherit;color:var(--text);font-size:15px;}
+button{cursor:pointer;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;}
+
+/* ── Barra superior ── */
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.top-tit{font-weight:800;font-size:14px;line-height:1.15;min-width:0;}
+.top-tit small{display:block;font-weight:600;font-size:11px;color:var(--text-dim);}
+.flex1{flex:1;}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--bg2);white-space:nowrap;}
+.pill .dot{width:9px;height:9px;border-radius:50%;background:var(--text-dim);}
+.pill.on .dot{background:var(--green);box-shadow:0 0 6px var(--green);}
+.pill.off .dot{background:var(--red);}
+.pill.pend{border-color:rgba(227,179,65,.45);color:var(--amber);}
+.pill.mal{border-color:rgba(255,107,107,.45);color:var(--red);}
+.nav{display:flex;gap:6px;}
+.nav button{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:700;color:var(--text-dim);}
+.nav button.on{border-color:var(--border-g);color:var(--green);background:var(--green-dim);}
+.tasabar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-dim);}
+.tasabar b{color:var(--text);}
+.tasabar .vieja{color:var(--amber);font-weight:700;}
+.banner{margin:10px 12px 0;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.45;}
+.banner.mal{background:var(--red-dim);border:1px solid rgba(255,107,107,.4);}
+.banner.av{background:var(--amber-dim);border:1px solid rgba(227,179,65,.4);}
+
+/* ── Vistas ── */
+.vista{display:none;}
+.vista.on{display:block;}
+.wrap{max-width:1200px;margin:0 auto;padding:12px;}
+.venta-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+@media (min-width:900px){.venta-grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr);}}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;}
+.card-tit{font-size:12px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.inp{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;outline:none;}
+.inp:focus{border-color:var(--border-g);}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+.btn{border:1px solid var(--border);background:var(--bg2);border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.btn:disabled{opacity:.55;cursor:default;}
+.btn.green{background:var(--green);color:var(--btn-txt);border-color:var(--green);}
+.btn.naranja{background:#d35400;color:#fff;border-color:#d35400;}
+.btn.red{background:#c0392b;color:#fff;border-color:#c0392b;}
+.btn.sm{padding:6px 10px;font-size:12px;}
+.btn.block{width:100%;}
+.lista-prod{margin-top:8px;max-height:52vh;overflow:auto;border-radius:8px;}
+@media (min-width:900px){.lista-prod{max-height:calc(100vh - 250px);}}
+.prod{display:flex;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--border);cursor:pointer;}
+.prod:hover{background:var(--bg3);}
+.prod-nom{font-weight:700;font-size:13px;line-height:1.3;}
+.prod-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.prod-pr{margin-left:auto;text-align:right;white-space:nowrap;}
+.prod-pr b{display:block;font-size:13px;}
+.prod-pr span{font-size:11px;color:var(--text-dim);}
+.ex{display:inline-block;font-size:10px;font-weight:800;padding:1px 6px;border-radius:4px;background:var(--green-dim);color:var(--green);margin-left:4px;}
+.ex.bajo{background:var(--amber-dim);color:var(--amber);}
+.ex.cero{background:var(--red-dim);color:var(--red);}
+.tag{display:inline-block;font-size:10px;font-weight:800;padding:1px 6px;border-radius:4px;background:rgba(142,68,173,.25);color:var(--purple);}
+.vacio{padding:18px 10px;text-align:center;color:var(--text-dim);font-size:13px;line-height:1.5;}
+
+.fila-cli{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.chipbtn{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;max-width:100%;}
+.chipbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chipbtn.on{border-color:var(--border-g);color:var(--green);}
+select.inp{padding:8px 10px;}
+.linea{border-bottom:1px solid var(--border);padding:9px 0;display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;}
+.linea-nom{font-weight:700;font-size:13px;line-height:1.3;}
+.linea-nom .man{font-size:10px;color:var(--amber);font-weight:800;margin-left:4px;}
+.linea-ctrl{display:flex;align-items:center;gap:6px;grid-column:1/2;}
+.linea-ctrl input{width:76px;padding:7px 8px;text-align:center;}
+.linea-ctrl .pu{font-size:12px;color:var(--text-dim);}
+.linea-tot{text-align:right;font-weight:800;white-space:nowrap;}
+.linea-tot small{display:block;font-weight:600;font-size:11px;color:var(--text-dim);}
+.linea-acc{display:flex;gap:4px;justify-content:flex-end;}
+.ico{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--text-dim);}
+.tot{margin-top:10px;font-size:13px;}
+.tot div{display:flex;justify-content:space-between;padding:2px 0;color:var(--text-dim);}
+.tot div b{color:var(--text);}
+.tot .grande{font-size:20px;font-weight:800;color:var(--text);padding-top:6px;}
+.tot .grande b{color:var(--green);}
+.barra-cobro{position:sticky;bottom:0;z-index:15;background:var(--bg);border-top:1px solid var(--border);padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;}
+.barra-cobro .t{font-weight:800;font-size:17px;line-height:1.15;}
+.barra-cobro .t small{display:block;font-size:12px;color:var(--text-dim);font-weight:600;}
+@media (max-width:899px){
+  .barra-cobro{position:fixed;left:0;right:0;bottom:0;box-shadow:0 -6px 20px rgba(0,0,0,.35);}
+  #vVender .wrap{padding-bottom:96px;}
+  .lista-prod{max-height:45vh;}
+  body .toast{top:70px;bottom:auto;}
+}
+@media (min-width:900px){.barra-cobro{position:static;border:none;padding:12px 0 0;background:none;}}
+
+/* ── Modales ── */
+.mfondo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;}
+.modal{background:var(--bg);border:1px solid var(--border);border-radius:12px;width:100%;max-width:440px;max-height:92vh;overflow:auto;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
+.modal.ancho{max-width:640px;}
+.m-ico{font-size:30px;text-align:center;}
+.m-tit{font-size:16px;font-weight:800;text-align:center;margin:4px 0 8px;}
+.m-txt{font-size:14px;line-height:1.5;color:var(--text);}
+.m-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;}
+.m-btns .btn{flex:1;min-width:120px;}
+.m-err{color:var(--red);font-size:13px;margin-top:6px;min-height:18px;}
+.lbl{display:block;font-size:12px;font-weight:700;color:var(--text-dim);margin:10px 0 4px;}
+.seg{display:flex;gap:6px;}
+.seg button{flex:1;}
+.seg button.on{border-color:var(--border-g);color:var(--green);background:var(--green-dim);}
+
+/* ── Pago ── */
+.pg-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:10px;}
+.pg-head .tt{font-size:22px;font-weight:800;color:var(--green);}
+.pg-head .bs{font-size:14px;color:var(--text-dim);font-weight:700;text-align:right;}
+.pg-hint{font-size:12px;color:var(--text-dim);margin-bottom:8px;line-height:1.45;}
+.pg-col-tit{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 6px;}
+.pg-col-tit.bs{color:var(--blue);} .pg-col-tit.usd{color:var(--green);} .pg-col-tit.ot{color:var(--purple);}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{border:1px solid var(--border);background:var(--bg2);border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;}
+.chip.bs{border-color:rgba(52,152,219,.4);}
+.chip.usd{border-color:rgba(0,232,122,.3);}
+.chip.cred{border-color:rgba(142,68,173,.45);}
+.chip.usado{opacity:.5;}
+.pl{border:1px solid var(--border);border-radius:9px;padding:9px;margin-top:8px;background:var(--bg2);}
+.pl.bs{border-left:3px solid #3498db;} .pl.usd{border-left:3px solid var(--green);} .pl.cred{border-left:3px solid #8e44ad;} .pl.vt{border-left:3px solid var(--amber);}
+.pl-cab{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;margin-bottom:6px;}
+.pl-cuerpo{display:flex;gap:8px;align-items:center;}
+.pl-cuerpo .mon{font-weight:800;color:var(--text-dim);width:22px;text-align:center;}
+.pl-cuerpo input{flex:1;min-width:0;}
+.pl-eq{font-size:12px;color:var(--text-dim);margin-top:5px;line-height:1.4;}
+.bal{margin-top:12px;border-radius:8px;padding:10px;font-weight:700;font-size:14px;text-align:center;}
+.bal.ok{background:var(--green-dim);color:var(--green);}
+.bal.falta{background:var(--red-dim);color:var(--red);}
+.bal.sobra{background:var(--amber-dim);color:var(--amber);}
+.dif{margin-top:8px;font-size:12px;line-height:1.45;padding:8px 10px;border-radius:8px;}
+.dif.afavor{background:var(--green-dim);} .dif.encontra{background:var(--red-dim);}
+.okpanel{text-align:center;padding:10px 0;}
+.okpanel .num{font-size:20px;font-weight:800;color:var(--green);margin:6px 0;}
+
+/* ── Ventas del equipo ── */
+.res{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px;}
+.res > div{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:10px;}
+.res .met{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--border);}
+.res .met:last-child{border-bottom:none;}
+.res > div > b{display:block;font-size:18px;}
+.res span{font-size:11px;color:var(--text-dim);font-weight:700;text-transform:uppercase;}
+.vt-item{background:var(--bg);border:1px solid var(--border);border-radius:9px;margin-bottom:8px;overflow:hidden;}
+.vt-cab{display:flex;gap:10px;align-items:center;padding:10px;cursor:pointer;}
+.vt-cab .n{font-weight:800;font-size:13px;}
+.vt-cab .s{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.vt-cab .m{margin-left:auto;text-align:right;font-weight:800;white-space:nowrap;}
+.est{display:inline-block;font-size:11px;font-weight:800;padding:2px 7px;border-radius:5px;margin-top:3px;}
+.est.sub{background:var(--green-dim);color:var(--green);}
+.est.av{background:var(--amber-dim);color:var(--amber);}
+.est.por{background:var(--blue-dim);color:var(--blue);}
+.est.mal{background:var(--red-dim);color:var(--red);}
+.vt-det{display:none;border-top:1px solid var(--border);padding:10px;font-size:13px;line-height:1.5;}
+.vt-item.abierto .vt-det{display:block;}
+.vt-det table{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0 8px;}
+.vt-det td{padding:3px 0;border-bottom:1px dashed var(--border);}
+.vt-det td.r{text-align:right;white-space:nowrap;}
+.vt-msg{padding:8px 10px;border-radius:7px;margin-bottom:8px;font-size:12px;}
+.vt-msg.av{background:var(--amber-dim);} .vt-msg.mal{background:var(--red-dim);}
+.filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.filtros button.on{border-color:var(--border-g);color:var(--green);background:var(--green-dim);}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;}
+.kv span{color:var(--text-dim);}
+.switch{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;}
+.switch input{width:20px;height:20px;accent-color:var(--green);}
+
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--bg4);color:var(--text);border:1px solid var(--border-g);border-radius:10px;padding:10px 16px;font-weight:700;font-size:14px;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.4);max-width:90vw;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none;}
+.toast.on{opacity:1;}
+.activar{max-width:520px;margin:40px auto;text-align:center;line-height:1.55;}
+.activar h1{font-size:20px;margin:10px 0;}
+.activar p{color:var(--text-dim);margin-bottom:10px;}
+.oculto{display:none!important;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-tit" id="tTit">Caja sin internet<small id="tSub">ControlMaster</small></div>
+  <div class="flex1"></div>
+  <button type="button" class="pill" id="pillEstado" onclick="irA('ventas')"><span class="dot"></span><span id="pillTxt">Revisando…</span></button>
+  <nav class="nav" id="nav">
+    <button type="button" data-v="vender" class="on" onclick="irA('vender')">🛒 Vender</button>
+    <button type="button" data-v="ventas" onclick="irA('ventas')">🧾 Ventas</button>
+    <button type="button" data-v="ajustes" onclick="irA('ajustes')">⚙️</button>
+  </nav>
+</header>
+<div class="tasabar" id="tasaBar"></div>
+<div id="banners"></div>
+
+<!-- ACTIVAR -->
+<section class="vista" id="vActivar">
+  <div class="activar card" style="margin:24px 12px;">
+    <div style="font-size:44px;">🔌</div>
+    <h1>Caja sin internet</h1>
+    <div id="actTxt">
+      <p>Este equipo todavía no está activado.</p>
+      <p>Abre en este equipo, <b>con internet</b>, el enlace de activación que te dio Solumaker. Se usa una sola vez.</p>
+    </div>
+    <div id="actBtns" style="margin-top:12px;"></div>
+  </div>
+</section>
+
+<!-- VENDER -->
+<section class="vista" id="vVender">
+  <div class="wrap">
+    <div class="venta-grid">
+      <div class="card">
+        <div class="card-tit">🔎 Productos</div>
+        <input class="inp" id="busca" type="search" placeholder="Código, código de barras o nombre" autocomplete="off" oninput="buscar()" onkeydown="if(event.key==='Enter'){event.preventDefault();buscarEnter();}">
+        <div class="lista-prod" id="listaProd"></div>
+      </div>
+      <div class="card">
+        <div class="card-tit">🧾 Venta <span class="flex1"></span><button type="button" class="btn sm" id="btnLimpiar" onclick="limpiarVentaConfirmar()">🗑️ Vaciar</button></div>
+        <div class="fila-cli">
+          <button type="button" class="chipbtn" id="btnCliente" onclick="abrirClientes()">👤 <span id="cliNom">Genérico</span></button>
+          <select class="inp" id="selVend" style="width:auto;flex:1;min-width:150px;" onchange="F.vend=this.value"></select>
+          <span class="chipbtn oculto" id="badgeVend"></span>
+          <select class="inp" id="selTipoPrecio" style="width:auto;" onchange="cambiarTipoPrecio(this.value)"></select>
+        </div>
+        <div id="lineas"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn sm" id="btnDesc" onclick="abrirDescuento()">🏷️ Descuento</button>
+        </div>
+        <div class="tot" id="totales"></div>
+        <div class="barra-cobro">
+          <div class="t" id="barraTot">Bs 0,00<small>$0,00 BCV</small></div>
+          <div class="flex1"></div>
+          <button type="button" class="btn green" id="btnCobrar" onclick="abrirPago()" style="min-width:140px;font-size:16px;">💳 Cobrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VENTAS DEL EQUIPO -->
+<section class="vista" id="vVentas">
+  <div class="wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button type="button" class="btn green" id="btnSubir" onclick="subirAhora(this)">⬆️ Subir ahora</button>
+      <button type="button" class="btn" onclick="descargarRespaldo()">💾 Descargar respaldo</button>
+    </div>
+    <div class="res" id="resumen"></div>
+    <div class="filtros" id="filtros">
+      <button type="button" class="btn sm on" data-f="hoy" onclick="filtrarVentas('hoy')">Hoy</button>
+      <button type="button" class="btn sm" data-f="por" onclick="filtrarVentas('por')">Por subir</button>
+      <button type="button" class="btn sm" data-f="mal" onclick="filtrarVentas('mal')">Con problema</button>
+      <button type="button" class="btn sm" data-f="av" onclick="filtrarVentas('av')">Con avisos</button>
+      <button type="button" class="btn sm" data-f="todas" onclick="filtrarVentas('todas')">Todas</button>
+    </div>
+    <div id="listaVentas"></div>
+  </div>
+</section>
+
+<!-- AJUSTES -->
+<section class="vista" id="vAjustes">
+  <div class="wrap" style="max-width:640px;">
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-tit">🖥️ Este equipo</div>
+      <div class="kv" id="infoEquipo"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn green" id="btnActualizar" onclick="actualizarDatos(this)">🔄 Actualizar datos</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-tit">💱 Tasas para cobrar</div>
+      <div class="kv" id="infoTasas"></div>
+      <div style="margin-top:12px;"><button type="button" class="btn" onclick="cambiarTasa(this)">🔒 Cambiar tasa</button></div>
+    </div>
+    <div class="card">
+      <div class="card-tit">🖨️ Preferencias</div>
+      <label class="switch"><input type="checkbox" id="chkDosCopias" onchange="guardarPref()"> Imprimir 2 copias del ticket</label>
+      <label class="switch"><input type="checkbox" id="chkClaro" onchange="guardarPref()"> Tema claro</label>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:8px;" id="verApp"></div>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL PAGO -->
+<div class="mfondo oculto" id="mPago">
+  <div class="modal ancho">
+    <div id="pgForm">
+      <div class="pg-head">
+        <div><div style="font-size:12px;color:var(--text-dim);font-weight:700;">TOTAL A COBRAR</div><div class="tt" id="pgTotal"></div></div>
+        <div class="bs" id="pgTotalBs"></div>
+      </div>
+      <div class="pg-hint" id="pgHint"></div>
+      <div id="pgMetodos"></div>
+      <div style="margin-top:6px;" class="oculto" id="pgMas"><button type="button" class="btn sm" onclick="P.verMet=true;pgActualizar()">＋ Otro método</button></div>
+      <div id="pgLineas"></div>
+      <div id="pgDias" class="oculto">
+        <label class="lbl" for="selDias">Días de crédito</label>
+        <select class="inp" id="selDias" onchange="P.dias=Number(this.value)||0"></select>
+      </div>
+      <div id="pgBal"></div>
+      <div id="pgVuelto" class="oculto" style="margin-top:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;"><b>💸 Vuelto</b><button type="button" class="btn sm" onclick="pgVueltoCerrar()">Quitar vuelto</button></div>
+        <div style="font-size:12px;color:var(--text-dim);margin:4px 0;" id="pgVtSobra"></div>
+        <div id="pgVtMetodos"></div>
+        <div id="pgVtLineas"></div>
+      </div>
+      <label class="lbl" for="pgRef">Referencia (opcional)</label>
+      <input class="inp" id="pgRef" placeholder="N° de operación, últimos dígitos…" maxlength="60">
+      <label class="lbl" for="pgObs">Observaciones (opcional)</label>
+      <input class="inp" id="pgObs" placeholder="Se imprimen en el ticket" maxlength="200">
+      <div class="m-btns">
+        <button type="button" class="btn" id="pgCerrar" onclick="cerrarPago()">Volver</button>
+        <button type="button" class="btn green" id="pgGuardar" onclick="pgConfirmar()">✅ Guardar venta</button>
+      </div>
+    </div>
+    <div id="pgOk" class="okpanel oculto">
+      <div style="font-size:42px;">✅</div>
+      <div class="m-tit">Venta guardada en este equipo</div>
+      <div class="num" id="pgOkNum"></div>
+      <div class="m-txt" id="pgOkTxt" style="color:var(--text-dim);font-size:13px;"></div>
+      <div class="m-btns">
+        <button type="button" class="btn" onclick="pgTerminar(false)">Sin imprimir</button>
+        <button type="button" class="btn green" onclick="pgTerminar(true)">🖨️ Imprimir ticket</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+// ══════════════════════════════════════════════════════════════
+//  CAJA SIN INTERNET · ControlMaster — Tanda 2 (3-11-2026)
+//  Vende sin conexión y, cuando vuelve el internet, sube cada venta al sistema
+//  (doPost → vsi_subir). El sistema la registra igual que una venta normal y una sola vez.
+//  Todo queda en este equipo (IndexedDB) hasta que el sistema confirma el número de factura.
+//  Solo tasaBin APAGADO: los Bs a tasa BCV y los $ a tasa Divisas (H9).
+// ══════════════════════════════════════════════════════════════
+const APP_VER = "1.0 · 3-11-2026";
+const DB_NOMBRE = "cm_caja_sin_internet";
+const TOL = 0.011;   // un centavo, como el servidor (> 0,01)
+
+const $ = id => document.getElementById(id);
+const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
+const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
+function fmt(v){ const n = Number(v); if (isNaN(n)) return "0,00"; try { return n.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return n.toFixed(2); } }
+function fmtCant(v){ const n = Number(v); if (isNaN(n)) return "0"; if (n % 1 === 0) return String(Math.round(n)); return n.toLocaleString("es-VE", { minimumFractionDigits: 1, maximumFractionDigits: 3 }); }
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+function hoyTxt(d){ d = d || new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+function ahoraTxt(d){ d = d || new Date(); return hoyTxt(d) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }
+function fechaCorta(f){ const p = String(f || "").slice(0, 10).split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : String(f || ""); }
+function horaDe(txt){ return String(txt || "").slice(11, 16); }
+function norm(s){ return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim(); }
+function uuid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+  const h = [...b].map(x => x.toString(16).padStart(2, "0")).join("");
+  return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+}
+
+// ── Estado ──
+const S = {
+  eq: null,          // { url, token } — el permiso de este equipo
+  datos: null,       // lo que mandó el sistema (vsi_datos) + descargadoEn
+  tasas: null,       // { bcv, div, fecha, origen: "sistema" | "manual" }
+  ventas: [],        // todas las ventas de este equipo
+  pref: { dosCopias: false, claro: false },
+  online: null,      // true / false / null (no se sabe)
+  sincronizando: false,
+  permisoMal: "",    // texto si el sistema dijo que este equipo no tiene permiso
+  datosMal: "",      // texto si el sistema no pudo dar los datos
+  tasaOkHoy: "",     // fecha en que el cajero confirmó la tasa vieja
+  filtro: "hoy",
+  vista: "vender"
+};
+const F = nuevaFactura();   // la venta que se está armando
+function nuevaFactura(){ return { items: [], cliente: { cedula: "", nombre: "Genérico", direccion: "", telefono: "" }, tipoPrecio: 0, desc: { tipo: "ninguno", valor: 0 }, vend: "", claveOk: false, seq: 0 }; }
+let P = null;              // el pago abierto
+let _ventaGuardada = null; // la que se acaba de guardar (para imprimir)
+
+// ══ BASE DE DATOS DEL EQUIPO (IndexedDB) ══
+let _db = null;
+function dbAbrir(){
+  return new Promise((ok, ko) => {
+    const q = indexedDB.open(DB_NOMBRE, 1);
+    q.onupgradeneeded = () => {
+      const db = q.result;
+      if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
+      if (!db.objectStoreNames.contains("ventas")) db.createObjectStore("ventas", { keyPath: "id" });
+    };
+    q.onsuccess = () => { _db = q.result; ok(_db); };
+    q.onerror = () => ko(q.error);
+  });
+}
+function dbOp(store, modo, fn){
+  return new Promise((ok, ko) => {
+    let t, req;
+    try { t = _db.transaction(store, modo); req = fn(t.objectStore(store)); }
+    catch (e) { ko(e); return; }
+    t.oncomplete = () => ok(req ? req.result : undefined);
+    t.onerror = () => ko(t.error);
+    t.onabort = () => ko(t.error || new Error("La base de datos del equipo canceló la operación."));
+  });
+}
+const kvGet = k => dbOp("kv", "readonly", s => s.get(k));
+const kvSet = (k, v) => dbOp("kv", "readwrite", s => s.put(v, k));
+const ventaPut = v => dbOp("ventas", "readwrite", s => s.put(v));
+const ventasTodas = () => dbOp("ventas", "readonly", s => s.getAll());
+// Número de la venta y la venta, en UNA operación: si algo falla no queda ni uno ni lo otro
+function guardarVentaNueva(v){
+  return new Promise((ok, ko) => {
+    const t = _db.transaction(["kv", "ventas"], "readwrite");
+    const kv = t.objectStore("kv"), vs = t.objectStore("ventas");
+    const g = kv.get("seq");
+    g.onsuccess = () => {
+      const n = (Number(g.result) || 0) + 1;
+      kv.put(n, "seq");
+      v.numero = "OFF-" + (S.datos.equipo || "XXXX") + "-" + String(n).padStart(4, "0");
+      vs.put(v);
+    };
+    t.oncomplete = () => ok(v);
+    t.onerror = () => ko(t.error);
+    t.onabort = () => ko(t.error || new Error("La venta no se pudo guardar en el equipo."));
+  });
+}
+
+// ══ HABLAR CON EL SISTEMA ══
+function ErrRed(msg){ const e = new Error(msg); e.red = true; return e; }
+async function llamar(accion, extra, ms){
+  if (!S.eq) throw new Error("Este equipo no está activado.");
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), ms || 60000);
+  let r;
+  try {
+    r = await fetch(S.eq.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ accion: accion, token: S.eq.token }, extra || {})),
+      signal: ctl.signal, redirect: "follow", cache: "no-store" });
+  } catch (e) {
+    clearTimeout(to);
+    marcarOnline(false);
+    throw ErrRed(e && e.name === "AbortError" ? "El sistema tardó demasiado en responder." : "No hay conexión con el sistema.");
+  }
+  clearTimeout(to);
+  marcarOnline(true);
+  const txt = await r.text();
+  try { return JSON.parse(txt); }
+  catch (e) { throw new Error("El sistema respondió algo que no se entiende (" + (r.status || "") + "). Revisa que el enlace de activación sea el del sistema y que la implementación esté al día."); }
+}
+function marcarOnline(v){ if (S.online !== v) { S.online = v; pintarEstado(); } }
+
+// Errores que no son de una venta: permiso y tasaBin
+function revisarErrorSistema(r){
+  if (r && r.codigo === "PERMISO") { S.permisoMal = r.msg || "Este equipo no tiene permiso."; pintarBanners(); return true; }
+  if (r && r.codigo === "TASABIN_ON") { S.datosMal = r.msg; pintarBanners(); return true; }
+  return false;
+}
+
+// ══ ARRANQUE ══
+window.addEventListener("load", arrancar);
+async function arrancar(){
+  $("verApp").textContent = "Caja sin internet · versión " + APP_VER;
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  try { await dbAbrir(); }
+  catch (e) { mostrarVista("activar"); $("actTxt").innerHTML = "<p>Este navegador no deja guardar datos (¿ventana de incógnito?). La caja sin internet necesita guardar las ventas en el equipo: ábrela en una ventana normal.</p>"; return; }
+  S.eq = await kvGet("equipo") || null;
+  S.datos = await kvGet("datos") || null;
+  S.tasas = await kvGet("tasas") || null;
+  S.pref = Object.assign(S.pref, await kvGet("pref") || {});
+  S.ventas = (await ventasTodas()) || [];
+  aplicarTema();
+
+  const act = leerActivacion();
+  if (act) {
+    S.eq = act;
+    await kvSet("equipo", act);
+    history.replaceState(null, "", location.pathname + location.search);   // el enlace es una llave: se quita de la barra
+  }
+  if (!S.eq) { mostrarVista("activar"); pintarEstado(); return; }
+  if (!S.datos) {
+    mostrarVista("activar");
+    $("actTxt").innerHTML = "<p>" + (act ? "Enlace recibido." : "Este equipo tiene permiso, pero todavía no descargó los datos del negocio.") +
+      " Ahora hay que descargar los productos, clientes y tasas. Necesita <b>internet</b> esta vez.</p>";
+    $("actBtns").innerHTML = '<button type="button" class="btn green" id="btnPrimera" onclick="primeraDescarga(this)">⬇️ Descargar datos</button>';
+    pintarEstado();
+    primeraDescarga($("btnPrimera"));
+    return;
+  }
+  listo();
+}
+function listo(){
+  mostrarVista(S.vista === "activar" ? "vender" : S.vista);
+  pintarTodo();
+  setTimeout(async () => { const r = await sincronizar(); if (!(r && r.subidas)) actualizarDatos(null, true); }, 800);
+  setInterval(() => sincronizar(), 60000);                     // cada minuto, si hay algo por subir
+  setInterval(() => { if (S.online !== false) actualizarDatos(null, true); }, 20 * 60000);
+  window.addEventListener("online", () => { sincronizar(); });
+  window.addEventListener("offline", () => marcarOnline(false));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizar(); });
+}
+function leerActivacion(){
+  const m = String(location.hash || "").match(/[#&]a=([A-Za-z0-9_\-=]+)/);
+  if (!m) return null;
+  try {
+    let b = m[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (b.length % 4) b += "=";
+    const bin = atob(b), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const o = JSON.parse(new TextDecoder().decode(bytes));
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(o.u) && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(o.u)) return null;
+    if (!/^[A-Za-z0-9]{32,80}$/.test(String(o.t || ""))) return null;
+    return { url: o.u, token: o.t, activado: ahoraTxt() };
+  } catch (e) { return null; }
+}
+async function primeraDescarga(btn){
+  btnOcupado(btn, "Descargando…");
+  try {
+    await descargarDatos();
+    btnLibre(btn);
+    toast("✅ Datos descargados");
+    listo();
+  } catch (e) {
+    btnLibre(btn);
+    if (S.permisoMal || S.datosMal) { pintarBanners(); return; }
+    aviso({ icono: "📡", titulo: "No se pudieron descargar los datos", html: esc(e.message) + "<br><br>Revisa que este equipo tenga internet y vuelve a tocar <b>Descargar datos</b>." });
+  }
+}
+async function descargarDatos(){
+  const d = await llamar("vsi_datos", {}, 90000);
+  if (!d || !d.ok) {
+    if (!revisarErrorSistema(d)) S.datosMal = "";
+    throw new Error((d && d.msg) || "El sistema no mandó los datos.");
+  }
+  d.descargadoEn = Date.now();
+  S.datos = d; S.permisoMal = ""; S.datosMal = "";
+  await kvSet("datos", d);
+  S.tasas = { bcv: Number(d.tasa) || 0, div: Number(d.tasaDivisas) || 0, fecha: hoyTxt(), origen: "sistema" };
+  await kvSet("tasas", S.tasas);
+}
+async function actualizarDatos(btn, silencioso){
+  if (!S.eq) return;
+  if (silencioso && P) return;   // con el cobro abierto no se cambian tasas ni precios
+  btnOcupado(btn, "Actualizando…");
+  try {
+    await descargarDatos();
+    btnLibre(btn);
+    if (!silencioso) toast("✅ Datos actualizados");
+    pintarTodo();
+  } catch (e) {
+    btnLibre(btn);
+    pintarBanners();
+    if (!silencioso && !S.permisoMal) aviso({ icono: "📡", titulo: "No se pudieron actualizar los datos", html: esc(e.message) + (e.red ? "<br><br>Puedes seguir vendiendo con los datos que ya tiene el equipo." : "") });
+  }
+}
+
+// ══ VISTAS Y PINTADO GENERAL ══
+function mostrarVista(v){
+  S.vista = v;
+  ["activar", "vender", "ventas", "ajustes"].forEach(x => $("v" + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle("on", x === v));
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  $("nav").classList.toggle("oculto", v === "activar");
+}
+function irA(v){
+  if (!S.datos) return;
+  mostrarVista(v);
+  if (v === "ventas") pintarVentas();
+  if (v === "ajustes") pintarAjustes();
+  if (v === "vender") setTimeout(() => { const b = $("busca"); if (b && window.innerWidth >= 900) b.focus(); }, 50);
+}
+function pintarTodo(){
+  pintarCabecera(); pintarEstado(); pintarBanners();
+  pintarSelectores(); buscar(); pintarFactura();
+  if (S.vista === "ventas") pintarVentas();
+  if (S.vista === "ajustes") pintarAjustes();
+}
+function pintarCabecera(){
+  const d = S.datos;
+  if (!d) return;
+  $("tTit").innerHTML = esc(d.negocio || "Mi negocio") + "<small>Caja sin internet · caja " + esc(d.caja) + " · equipo " + esc(d.equipo || "") + "</small>";
+  const t = S.tasas || {};
+  const vieja = t.fecha && t.fecha !== hoyTxt();
+  $("tasaBar").innerHTML = "💱 BCV <b>Bs " + fmt(t.bcv) + "</b> · Divisas <b>Bs " + (t.div > 0 ? fmt(t.div) : "—") + "</b>" +
+    (vieja ? ' · <span class="vieja">⚠️ tasa del ' + fechaCorta(t.fecha) + '</span>' : (t.origen === "manual" ? ' · <span class="vieja">puesta a mano</span>' : "")) +
+    '<span class="flex1"></span><span>Datos del ' + fechaCorta(hoyTxt(new Date(d.descargadoEn))) + " " + pad(new Date(d.descargadoEn).getHours()) + ":" + pad(new Date(d.descargadoEn).getMinutes()) + "</span>";
+}
+function cuentas(){
+  let por = 0, mal = 0;
+  S.ventas.forEach(v => { if (v.estado === "por_subir") por++; else if (v.estado === "pendiente" || v.estado === "invalida") mal++; });
+  return { por, mal };
+}
+function pintarEstado(){
+  const p = $("pillEstado"), c = cuentas();
+  p.classList.remove("on", "off", "pend", "mal");
+  let t = S.online === true ? "Con internet" : S.online === false ? "Sin internet" : "Revisando…";
+  if (S.online === true) p.classList.add("on"); else if (S.online === false) p.classList.add("off");
+  if (S.sincronizando) t = "Subiendo…";
+  if (c.mal) { p.classList.add("mal"); t += " · " + c.mal + " con problema"; }
+  else if (c.por) { p.classList.add("pend"); t += " · " + c.por + " por subir"; }
+  else if (S.ventas.length) t += " · todo subido";
+  $("pillTxt").textContent = t;
+}
+function pintarBanners(){
+  let h = "";
+  if (S.permisoMal) h += '<div class="banner mal">⛔ ' + esc(S.permisoMal) + " Puedes seguir vendiendo; las ventas quedan guardadas en este equipo.</div>";
+  if (S.datosMal) h += '<div class="banner mal">⛔ ' + esc(S.datosMal) + "</div>";
+  const c = cuentas();
+  if (c.mal) h += '<div class="banner av">⚠️ ' + c.mal + ' venta' + (c.mal > 1 ? "s" : "") + ' no se pudo' + (c.mal > 1 ? "eron" : "") + ' registrar en el sistema. ' + (c.mal > 1 ? "Están guardadas" : "Está guardada") + ' en este equipo: revisa el motivo en <a href="#" onclick="irA(\'ventas\');filtrarVentas(\'mal\');return false;" style="color:inherit;font-weight:800;">Ventas → Con problema</a>.</div>';
+  $("banners").innerHTML = h;
+}
+
+// ══ PRODUCTOS ══
+let _vendidoLocal = null;   // código → cantidad vendida en este equipo que el sistema todavía no tenía al descargar
+function vendidoLocal(){
+  if (_vendidoLocal) return _vendidoLocal;
+  const m = {}, desde = S.datos ? S.datos.descargadoEn : 0;
+  S.ventas.forEach(v => {
+    if (v.estado === "invalida") return;
+    if (v.subidaEn && v.subidaEn <= desde) return;   // ya estaba en los datos descargados
+    v.items.forEach(i => { if (i.tipo !== "servicio") m[i.codigo] = (m[i.codigo] || 0) + (Number(i.cantidad) || 0); });
+  });
+  return (_vendidoLocal = m);
+}
+function existenciaLocal(p){
+  const enFactura = F.items.filter(i => i.tipo !== "servicio" && i.codigo === p.codigo).reduce((s, i) => s + (Number(i.cantidad) || 0), 0);
+  return r3((Number(p.existencia) || 0) - (vendidoLocal()[p.codigo] || 0) - enFactura);
+}
+function precioDe(p, tipoIdx){
+  const lst = p.precios || [];
+  const x = lst[tipoIdx] && Number(lst[tipoIdx].base) > 0 ? lst[tipoIdx] : lst[0] || { base: 0, iva: 0 };
+  return { base: Number(x.base) || 0, iva: Number(x.iva) || 0 };
+}
+function catalogo(){
+  const d = S.datos || {};
+  const prods = (d.productos || []).map(p => Object.assign({ tipo: "producto" }, p));
+  const servs = (d.servicios || []).map(s => ({ tipo: "servicio", codigo: s.codigo, nombre: s.nombre, codigoBarras: "", precios: [{ base: s.base, iva: s.iva }] }));
+  return prods.concat(servs);
+}
+let _cat = null, _catDe = 0;
+function cat(){ if (!_cat || _catDe !== (S.datos && S.datos.descargadoEn)) { _cat = catalogo(); _catDe = S.datos && S.datos.descargadoEn; } return _cat; }
+function resultados(q){
+  const n = norm(q);
+  const todos = cat();
+  if (!n) return todos.slice(0, 40);
+  const exactos = todos.filter(p => norm(p.codigo) === n || norm(p.codigoBarras) === n);
+  const palabras = n.split(/\s+/);
+  const resto = todos.filter(p => exactos.indexOf(p) < 0 && palabras.every(w =>
+    norm(p.nombre).indexOf(w) >= 0 || norm(p.codigo).indexOf(w) >= 0 || norm(p.codigoBarras).indexOf(w) >= 0 || norm(p.marca).indexOf(w) >= 0));
+  return exactos.concat(resto).slice(0, 40);
+}
+function buscar(){
+  const box = $("listaProd");
+  if (!S.datos) { box.innerHTML = ""; return; }
+  const q = $("busca").value, lst = resultados(q), t = S.tasas || {};
+  if (!norm(q) && window.innerWidth < 900) { box.innerHTML = '<div class="vacio">Escribe el nombre o el código, o pasa el lector de códigos.</div>'; box._lst = []; return; }
+  if (!lst.length) { box.innerHTML = '<div class="vacio">No hay productos con «' + esc(q) + '».</div>'; box._lst = []; return; }
+  box.innerHTML = lst.map((p, k) => {
+    const pr = precioDe(p, F.tipoPrecio), conIva = pr.base * (1 + pr.iva / 100);
+    let ex = "";
+    if (p.tipo === "servicio") ex = '<span class="tag">SERVICIO</span>';
+    else { const e = existenciaLocal(p); ex = '<span class="ex ' + (e <= 0 ? "cero" : e <= 5 ? "bajo" : "") + '">' + fmtCant(e) + "</span>"; }
+    return '<div class="prod" onclick="agregarDeLista(' + k + ')"><div style="min-width:0;"><div class="prod-nom">' + esc(p.nombre) + "</div>" +
+      '<div class="prod-sub">' + esc(p.codigoBarras || p.codigo) + (p.marca ? " · " + esc(p.marca) : "") + " " + ex + "</div></div>" +
+      '<div class="prod-pr"><b>Bs ' + fmt(conIva * (t.bcv || 0)) + "</b><span>$" + fmt(conIva) + "</span></div></div>";
+  }).join("");
+  box._lst = lst;
+}
+function buscarEnter(){
+  const lst = $("listaProd")._lst || [], q = norm($("busca").value);
+  if (!q) return;
+  const ex = lst.filter(p => norm(p.codigo) === q || norm(p.codigoBarras) === q);
+  if (ex.length === 1) { agregar(ex[0]); return; }
+  if (lst.length === 1) { agregar(lst[0]); return; }
+  if (!lst.length) aviso({ icono: "🔎", titulo: "No está en la lista", html: "No hay ningún producto con «" + esc($("busca").value) + "» en los datos de este equipo. Si es nuevo, no se puede vender sin internet hasta que se actualicen los datos." });
+}
+function agregarDeLista(k){ const p = ($("listaProd")._lst || [])[k]; if (p) agregar(p); }
+async function agregar(p){
+  if (p.tipo !== "servicio") {
+    const e = existenciaLocal(p);
+    if (e < 1) {
+      const ok = await confirmar({ icono: "📦", titulo: "Sin existencia en este equipo", colorOk: "naranja", ok: "Vender igual",
+        html: "Según los datos de este equipo, de <b>" + esc(p.nombre) + "</b> quedan <b>" + fmtCant(Math.max(0, e)) + "</b>." +
+          "<br><br>Si lo tienes en la mano, véndelo: al subirse se registra igual y el sistema avisa que hay que revisar la existencia." });
+      if (!ok) return;
+    }
+  }
+  const pr = precioDe(p, F.tipoPrecio);
+  const ya = F.items.find(i => i.codigo === p.codigo && i.tipo === p.tipo && !i.manual && i.tipoIdx === F.tipoPrecio);
+  if (ya) ya.cantidad = r3((Number(ya.cantidad) || 0) + 1);
+  else F.items.push({ key: ++F.seq, tipo: p.tipo, codigo: p.codigo, nombre: p.nombre, codigoBarras: p.codigoBarras || p.codigo,
+    cantidad: 1, base: pr.base, iva: pr.iva, manual: false, tipoIdx: F.tipoPrecio });
+  $("busca").value = "";
+  buscar(); pintarFactura();
+  toast("✅ " + p.nombre);
+  if (window.innerWidth >= 900) $("busca").focus();
+}
+
+// ══ LA VENTA (factura) ══
+function pintarSelectores(){
+  const d = S.datos; if (!d) return;
+  // Tipo de precio
+  const tp = (d.tiposPrecios || []).map((n, i) => ({ n, i })).filter(o => o.i === 0 || (d.productos || []).some(p => p.precios && p.precios[o.i] && Number(p.precios[o.i].base) > 0));
+  $("selTipoPrecio").innerHTML = tp.map(o => '<option value="' + o.i + '"' + (o.i === F.tipoPrecio ? " selected" : "") + ">💲 " + esc(o.n) + "</option>").join("");
+  $("selTipoPrecio").classList.toggle("oculto", tp.length < 2);
+  // Vendedor
+  const sel = $("selVend"), badge = $("badgeVend");
+  sel.classList.add("oculto"); badge.classList.add("oculto");
+  if (d.trabajoVendedores && d.modoCajas === "cajero") {
+    if (F.vend === "") F.vend = d.vendedorCajaId ? String(d.vendedorCajaId) : "directa";
+    sel.innerHTML = '<option value="directa">🏪 Venta directa</option>' + (d.vendedores || []).map(v => '<option value="' + esc(v.id) + '">🧑‍💼 ' + esc(v.nombre) + "</option>").join("");
+    sel.value = F.vend; if (sel.value !== F.vend) { F.vend = "directa"; sel.value = "directa"; }
+    sel.classList.remove("oculto");
+  } else if (d.trabajoVendedores && d.vendedor && d.vendedor.nombre) {
+    badge.textContent = "🧑‍💼 " + d.vendedor.nombre; badge.classList.remove("oculto");
+  } else if (d.cajero && d.cajero.nombre) {
+    badge.textContent = "🧾 " + d.cajero.nombre; badge.classList.remove("oculto");
+  }
+}
+function cambiarTipoPrecio(v){
+  F.tipoPrecio = Number(v) || 0;
+  const c = cat();
+  F.items.forEach(i => { if (i.manual || i.tipo === "servicio") return; const p = c.find(x => x.codigo === i.codigo && x.tipo === i.tipo); if (!p) return; const pr = precioDe(p, F.tipoPrecio); i.base = pr.base; i.iva = pr.iva; i.tipoIdx = F.tipoPrecio; });
+  buscar(); pintarFactura();
+}
+// Total igual que el servidor (_vsiTotal_ / registrarVentaDesdeHTML): descuento prorrateado sobre base e IVA
+function totales(items, desc){
+  let sub = 0, iva = 0;
+  (items || []).forEach(i => { const q = Number(i.cantidad) || 0, b = Number(i.base) || 0; sub += b * q; iva += b * ((Number(i.iva) || 0) / 100) * q; });
+  const tot = sub + iva, d = desc || { tipo: "ninguno", valor: 0 };
+  let f = 0;
+  if (d.tipo === "pct") f = (Number(d.valor) || 0) / 100;
+  else if (d.tipo === "monto") f = tot > 0 ? Math.min(Number(d.valor) || 0, tot) / tot : 0;
+  f = Math.max(0, Math.min(1, f));
+  const descB = Math.round(sub * f * 100) / 100, ivaR = Math.round(iva * (1 - f) * 100) / 100;
+  return { sub: r2(sub), iva: r2(iva), desc: descB, ivaR: ivaR, total: Math.round((sub - descB + ivaR) * 100) / 100, f: f };
+}
+function pintarFactura(){
+  const box = $("lineas"), t = S.tasas || {};
+  _vendidoLocal = null;
+  if (!F.items.length) box.innerHTML = '<div class="vacio">Busca un producto o pasa el lector de códigos.<br>Toca un producto para agregarlo.</div>';
+  else box.innerHTML = F.items.map(i => {
+    const conIva = i.base * (1 + i.iva / 100), tl = conIva * (Number(i.cantidad) || 0);
+    return '<div class="linea"><div class="linea-nom">' + esc(i.nombre) + (i.manual ? '<span class="man">✏️ PRECIO MANUAL</span>' : "") + (i.tipo === "servicio" ? ' <span class="tag">SRV</span>' : "") + "</div>" +
+      '<div class="linea-tot">Bs ' + fmt(tl * (t.bcv || 0)) + "<small>$" + fmt(tl) + "</small></div>" +
+      '<div class="linea-ctrl"><input class="inp" type="number" inputmode="decimal" min="0" step="any" placeholder="Cant." value="' + (i.cantidad === "" ? "" : i.cantidad) + '" oninput="cambiarCant(' + i.key + ',this.value)">' +
+      '<span class="pu">× $' + fmt(conIva) + (i.iva ? " (IVA " + fmt(i.iva).replace(",00", "") + "%)" : "") + "</span></div>" +
+      '<div class="linea-acc"><button type="button" class="ico" title="Precio manual" onclick="precioManual(' + i.key + ')">✏️</button><button type="button" class="ico" title="Quitar" onclick="quitarLinea(' + i.key + ')">✕</button></div></div>';
+  }).join("");
+  pintarTotales();
+}
+function pintarTotales(){
+  const t = S.tasas || {}, x = totales(F.items, F.desc), bcv = t.bcv || 0;
+  let h = '<div><span>Subtotal</span><b>$' + fmt(x.sub) + "</b></div>";
+  if (x.desc > 0) h += '<div><span>Descuento ' + (F.desc.tipo === "pct" ? fmt(F.desc.valor).replace(",00", "") + " %" : "") + ' <a href="#" onclick="quitarDescuento();return false;" style="color:var(--red);">quitar</a></span><b>− $' + fmt(x.desc) + "</b></div>";
+  h += "<div><span>IVA</span><b>$" + fmt(x.ivaR) + "</b></div>";
+  h += '<div class="grande"><span>Total</span><b>Bs ' + fmt(r2(x.total * bcv)) + "</b></div>";
+  h += "<div><span>Total $ BCV</span><b>$" + fmt(x.total) + "</b></div>";
+  $("totales").innerHTML = h;
+  $("barraTot").innerHTML = "Bs " + fmt(r2(x.total * bcv)) + "<small>$" + fmt(x.total) + " BCV · " + F.items.length + " línea" + (F.items.length === 1 ? "" : "s") + "</small>";
+  $("btnDesc").classList.toggle("on", x.desc > 0);
+  $("cliNom").textContent = F.cliente.nombre + (F.cliente.cedula ? " · " + F.cliente.cedula : "");
+  $("btnCliente").classList.toggle("on", !!F.cliente.cedula);
+}
+function cambiarCant(key, v){
+  const i = F.items.find(x => x.key === key); if (!i) return;
+  i.cantidad = v === "" ? "" : r3(v);
+  // sin repintar las líneas (no se pierde el cursor)
+  const t = S.tasas || {}, conIva = i.base * (1 + i.iva / 100), tl = conIva * (Number(i.cantidad) || 0);
+  const fila = document.activeElement && document.activeElement.closest ? document.activeElement.closest(".linea") : null;
+  if (fila) fila.querySelector(".linea-tot").innerHTML = "Bs " + fmt(tl * (t.bcv || 0)) + "<small>$" + fmt(tl) + "</small>";
+  _vendidoLocal = null;
+  pintarTotales();
+}
+function quitarLinea(key){ F.items = F.items.filter(x => x.key !== key); pintarFactura(); buscar(); }
+async function limpiarVentaConfirmar(){
+  if (!F.items.length && !F.cliente.cedula && F.desc.tipo === "ninguno") return;
+  const ok = await confirmar({ icono: "🗑️", titulo: "Vaciar la venta", html: "Se quitan los productos, el cliente y el descuento de esta venta. No se guarda nada.", ok: "Sí, vaciar", colorOk: "red" });
+  if (ok) limpiarVenta();
+}
+function limpiarVenta(){
+  const tp = F.tipoPrecio;
+  Object.assign(F, nuevaFactura()); F.tipoPrecio = tp;   // el vendedor vuelve al de la caja (como en Ventas)
+  $("busca").value = "";
+  pintarSelectores(); buscar(); pintarFactura();
+}
+
+// ── Clave sin internet (descuento, precio manual, cambiar tasa) ──
+async function sha256hex(t){
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+let _claveFallas = 0, _claveBloqHasta = 0;
+async function pedirClave(titulo, texto){
+  const c = S.datos && S.datos.claveSinInternet;
+  if (!c || !c.salt || !c.hash) {
+    await aviso({ icono: "🔒", titulo: "Falta la clave sin internet", html: "Para esto hace falta la <b>clave sin internet</b>, y este equipo no la tiene. Pídele al administrador que la ponga; el equipo la recibe la próxima vez que se actualice con internet." });
+    return false;
+  }
+  return await modal({
+    icono: "🔒", titulo: titulo,
+    html: '<div class="m-txt">' + texto + '</div><input class="inp" id="mClave" type="password" placeholder="Clave sin internet" autocomplete="off" style="margin-top:10px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.closest(\'.modal\').querySelector(\'[data-v=ok]\').click();}"><div class="m-err" id="mClaveErr"></div>',
+    botones: [{ txt: "Cancelar", v: false }, { txt: "✅ Verificar", v: true, cls: "green", spin: "Verificando…" }],
+    foco: "mClave",
+    antes: async (v) => {
+      if (!v) return true;
+      const err = $("mClaveErr");
+      if (Date.now() < _claveBloqHasta) { err.textContent = "Demasiados intentos. Espera un minuto."; return false; }
+      const val = $("mClave").value;
+      if (!val) { err.textContent = "Escribe la clave."; return false; }
+      const h = await sha256hex(c.salt + val);
+      if (h !== c.hash) {
+        _claveFallas++;
+        if (_claveFallas >= 5) { _claveBloqHasta = Date.now() + 60000; _claveFallas = 0; }
+        err.textContent = "Clave incorrecta."; $("mClave").value = ""; $("mClave").focus(); return false;
+      }
+      _claveFallas = 0;
+      return true;
+    }
+  });
+}
+async function precioManual(key){
+  const i = F.items.find(x => x.key === key); if (!i) return;
+  if (S.datos.pideClave && S.datos.pideClave.manual && !F.claveOk) {
+    if (!await pedirClave("Precio manual", "Escribe la clave sin internet para cambiar el precio de <b>" + esc(i.nombre) + "</b>:")) return;
+    F.claveOk = true;
+  }
+  const conIva = i.base * (1 + i.iva / 100), bcv = (S.tasas || {}).bcv || 0;
+  const r = await modal({
+    icono: "✏️", titulo: "Precio manual",
+    html: '<div class="m-txt"><b>' + esc(i.nombre) + "</b><br><span style=\"color:var(--text-dim);font-size:13px;\">Hoy: $" + fmt(conIva) + " · Bs " + fmt(conIva * bcv) + (i.iva ? " (con IVA " + fmt(i.iva).replace(",00", "") + "%)" : "") + "</span></div>" +
+      '<label class="lbl">Precio por unidad' + (i.iva ? " con IVA" : "") + '</label><div class="seg" style="margin-bottom:6px;"><button type="button" class="btn sm on" id="mpUsd" onclick="this.classList.add(\'on\');$(\'mpBs\').classList.remove(\'on\');$(\'mpVal\').placeholder=\'En $ BCV\'">En $</button><button type="button" class="btn sm" id="mpBs" onclick="this.classList.add(\'on\');$(\'mpUsd\').classList.remove(\'on\');$(\'mpVal\').placeholder=\'En Bs\'">En Bs</button></div>' +
+      '<input class="inp" id="mpVal" type="number" inputmode="decimal" min="0" step="any" placeholder="En $ BCV"><div class="m-err" id="mpErr"></div>',
+    botones: [{ txt: "Cancelar", v: false }, { txt: "✅ Aplicar", v: true, cls: "green" }],
+    foco: "mpVal",
+    antes: (v) => {
+      if (!v) return true;
+      const x = Number($("mpVal").value);
+      if (!(x > 0)) { $("mpErr").textContent = "Escribe un precio mayor que cero."; return false; }
+      let usd = $("mpBs").classList.contains("on") ? (bcv > 0 ? x / bcv : 0) : x;
+      i.base = usd / (1 + i.iva / 100);
+      i.manual = true; i.tipoIdx = -1;
+      return true;
+    }
+  });
+  if (r) pintarFactura();
+}
+async function abrirDescuento(){
+  if (!F.items.length) { aviso({ icono: "🏷️", titulo: "La venta está vacía", html: "Agrega los productos primero y después el descuento." }); return; }
+  if (S.datos.pideClave && S.datos.pideClave.descuento && !F.claveOk) {
+    if (!await pedirClave("Descuento", "Escribe la clave sin internet para hacer un descuento:")) return;
+    F.claveOk = true;
+  }
+  const x = totales(F.items, { tipo: "ninguno" });
+  let tipo = F.desc.tipo === "monto" ? "monto" : "pct";
+  const r = await modal({
+    icono: "🏷️", titulo: "Descuento",
+    html: '<div class="m-txt" style="color:var(--text-dim);font-size:13px;">Total sin descuento: $' + fmt(x.total) + "</div>" +
+      '<div class="seg" style="margin-top:10px;"><button type="button" class="btn sm' + (tipo === "pct" ? " on" : "") + '" id="dPct" onclick="this.classList.add(\'on\');$(\'dMon\').classList.remove(\'on\');$(\'dVal\').placeholder=\'Porcentaje (%)\'">%</button><button type="button" class="btn sm' + (tipo === "monto" ? " on" : "") + '" id="dMon" onclick="this.classList.add(\'on\');$(\'dPct\').classList.remove(\'on\');$(\'dVal\').placeholder=\'Monto en $ BCV\'">$</button></div>' +
+      '<input class="inp" id="dVal" type="number" inputmode="decimal" min="0" step="any" style="margin-top:8px;" placeholder="' + (tipo === "pct" ? "Porcentaje (%)" : "Monto en $ BCV") + '" value="' + (F.desc.valor > 0 ? F.desc.valor : "") + '"><div class="m-err" id="dErr"></div>',
+    botones: [{ txt: "Cancelar", v: false }, { txt: "✅ Aplicar", v: true, cls: "green" }],
+    foco: "dVal",
+    antes: (v) => {
+      if (!v) return true;
+      const val = Number($("dVal").value) || 0, pct = $("dPct").classList.contains("on");
+      if (!(val > 0)) { $("dErr").textContent = "Escribe el descuento."; return false; }
+      if (pct && val > 100) { $("dErr").textContent = "El porcentaje no puede pasar de 100."; return false; }
+      if (!pct && val > x.total + 0.001) { $("dErr").textContent = "El descuento no puede pasar del total ($" + fmt(x.total) + ")."; return false; }
+      F.desc = { tipo: pct ? "pct" : "monto", valor: val };
+      return true;
+    }
+  });
+  if (r) pintarTotales();
+}
+function quitarDescuento(){ F.desc = { tipo: "ninguno", valor: 0 }; pintarTotales(); }
+
+// ── Clientes ──
+async function abrirClientes(){
+  const lst = (S.datos.clientes || []);
+  const pintar = q => {
+    const n = norm(q);
+    const f = lst.filter(c => !n || norm(c.nombre).indexOf(n) >= 0 || norm(c.cedula).indexOf(n) >= 0).slice(0, 60);
+    $("mCliLista").innerHTML = '<div class="prod" data-ced=""><div class="prod-nom">👤 Genérico</div></div>' +
+      f.map(c => '<div class="prod" data-ced="' + esc(c.cedula) + '"><div style="min-width:0;"><div class="prod-nom">' + esc(c.nombre) + '</div><div class="prod-sub">' + esc(c.cedula) + (c.telefono ? " · " + esc(c.telefono) : "") + "</div></div></div>").join("") +
+      (f.length ? "" : '<div class="vacio">Ningún cliente con «' + esc(q) + '». Sin internet solo se pueden usar los clientes que ya existen.</div>');
+  };
+  const r = await modal({
+    icono: "👤", titulo: "Cliente", ancho: true,
+    html: '<input class="inp" id="mCliBusca" type="search" placeholder="Nombre o cédula" autocomplete="off"><div class="lista-prod" id="mCliLista" style="max-height:50vh;"></div>',
+    botones: [{ txt: "Cerrar", v: null }],
+    foco: "mCliBusca",
+    alAbrir: (box, cerrar) => {
+      pintar("");
+      $("mCliBusca").addEventListener("input", e => pintar(e.target.value));
+      $("mCliLista").addEventListener("click", e => {
+        const d = e.target.closest("[data-ced]"); if (!d) return;
+        const ced = d.dataset.ced;
+        cerrar(ced === "" ? { cedula: "", nombre: "Genérico" } : lst.find(c => String(c.cedula) === ced));
+      });
+    }
+  });
+  if (r) {
+    F.cliente = { cedula: r.cedula || "", nombre: r.nombre || "Genérico", direccion: r.direccion || "", telefono: r.telefono || "" };
+    pintarTotales();
+    if (P) { pgPintarMetodos(); pgActualizar(); }
+  }
+  return r;
+}
+
+// ══ COBRAR ══
+function tasaUsd(){ const t = S.tasas || {}; return t.div > 0 ? t.div : t.bcv; }   // los $ en efectivo, a tasa Divisas
+function metodos(){ return (S.datos.metodos || []); }
+function metodoCredito(){ const m = metodos().find(x => x.tipo === "CRED"); return m ? m.metodo : ""; }
+async function abrirPago(){
+  if (!F.items.length) { aviso({ icono: "🧾", titulo: "La venta está vacía", html: "Agrega al menos un producto." }); return; }
+  const malas = F.items.filter(i => !(Number(i.cantidad) > 0));
+  if (malas.length) { aviso({ icono: "🔢", titulo: "Falta una cantidad", html: "La línea <b>" + esc(malas[0].nombre) + "</b> no tiene cantidad. Escríbela o quita la línea con ✕." }); return; }
+  const t = S.tasas || {};
+  if (!(t.bcv > 0)) { aviso({ icono: "💱", titulo: "Falta la tasa", html: "Este equipo no tiene tasa BCV. Actualiza los datos con internet, o ponla en ⚙️ → Cambiar tasa." }); return; }
+  if (t.fecha !== hoyTxt() && S.tasaOkHoy !== hoyTxt()) {
+    const r = await modal({ icono: "💱", titulo: "¿La tasa sigue igual?",
+      html: '<div class="m-txt">La tasa de este equipo es del <b>' + fechaCorta(t.fecha) + "</b>: BCV <b>Bs " + fmt(t.bcv) + "</b> · Divisas <b>Bs " + (t.div > 0 ? fmt(t.div) : "—") + "</b>.<br><br>Si hoy es otra, cámbiala antes de cobrar (pide la clave sin internet).</div>",
+      botones: [{ txt: "🔒 Cambiar tasa", v: "cambiar" }, { txt: "Sí, cobrar con esa", v: "ok", cls: "green" }] });
+    if (r === "cambiar") { await cambiarTasa(null); return; }
+    if (r !== "ok") return;
+    S.tasaOkHoy = hoyTxt();
+  }
+  const tot = totales(F.items, F.desc).total;
+  P = { lineas: [], cred: { on: false, monto: "", editado: false }, vt: { on: false, lineas: [] }, seq: 0, verMet: false, dias: 0, total: tot };
+  $("pgTotal").textContent = "$" + fmt(tot) + " BCV";
+  $("pgTotalBs").innerHTML = "Bs " + fmt(r2(tot * t.bcv)) + "<br><span style=\"font-size:11px;\">a tasa BCV " + fmt(t.bcv) + "</span>";
+  $("pgHint").innerHTML = "Los <b>Bs</b> van a tasa BCV <b>Bs " + fmt(t.bcv) + "</b> · los <b>$</b> a tasa Divisas <b>Bs " + fmt(tasaUsd()) + "</b>" + (t.div > 0 ? "" : " (este negocio no tiene tasa Divisas: los $ van a la BCV)") + ".";
+  $("pgRef").value = ""; $("pgObs").value = "";
+  $("pgForm").classList.remove("oculto"); $("pgOk").classList.add("oculto");
+  $("pgCerrar").disabled = false; btnLibre($("pgGuardar"));
+  const pl = (S.datos.plazosCredito || []).filter(p => p.activo && p.dias > 0);
+  $("selDias").innerHTML = pl.map(p => '<option value="' + p.dias + '">' + p.dias + " días</option>").join("") + '<option value="0">Sin plazo</option>';
+  P.dias = pl.length ? pl[0].dias : 0; $("selDias").value = String(P.dias);
+  pgPintarMetodos(); pgPintarLineas(); pgPintarVuelto(); pgActualizar();
+  $("mPago").classList.remove("oculto");
+}
+function cerrarPago(){ $("mPago").classList.add("oculto"); P = null; }
+// Cuánto cubre / vale cada línea (OFF: la unidad es el $ BCV; los $ valen a tasa Divisas, igual que el servidor)
+function pgCubre(l){
+  const v = Number(l.monto) || 0, bcv = S.tasas.bcv; if (!(v > 0)) return 0;
+  return l.tipo === "BS" ? v / bcv : v * tasaUsd() / bcv;
+}
+function pgVale(l){
+  const v = Number(l.monto) || 0, bcv = S.tasas.bcv; if (!(v > 0)) return 0;
+  return l.tipo === "BS" ? v / bcv : r2(v * tasaUsd() / bcv);
+}
+function pgCredValor(){ return P.cred.on ? r2(Number(P.cred.monto) || 0) : 0; }
+function pgEstado(){
+  let cub = 0, vale = 0;
+  P.lineas.forEach(l => { cub += pgCubre(l); vale += pgVale(l); });
+  const cred = pgCredValor(), cubT = cub + cred, N = P.total;
+  const pendX = N - cubT, pend = r2(pendX);
+  let vtCub = 0, vtVale = 0;
+  if (P.vt.on) P.vt.lineas.forEach(v => { vtCub += pgCubre(v); vtVale += pgVale(v); });
+  const quedaX = -pendX - vtCub, queda = r2(quedaX);
+  const dif = r2(vale + cred - vtVale - N);
+  return { cub: r2(cub), cred, cubT: r2(cubT), pend, pendX, vtCub: r2(vtCub), vtVale: r2(vtVale), queda, quedaX, vale: r2(vale), dif, hay: P.lineas.length > 0 || P.cred.on };
+}
+function pgFilasMetodos(fn, usados, conCredito){
+  let h = "";
+  [["BS", "bs", "💙 En bolívares"], ["USD", "usd", "💚 En dólares"]].forEach(([mon, cls, tit]) => {
+    const ms = metodos().map((m, i) => ({ m, i })).filter(o => o.m.tipo === mon);
+    if (!ms.length) return;
+    h += '<div class="pg-col-tit ' + cls + '">' + tit + '</div><div class="chips">' + ms.map(o => {
+      const ok = o.m.conCuenta, us = usados.indexOf(o.m.metodo) >= 0;
+      return '<button type="button" class="chip ' + cls + (us ? " usado" : "") + '"' + (ok ? "" : " disabled") + ' onclick="' + fn + "(" + o.i + ')">' + esc(o.m.metodo) + (ok ? "" : " (sin cuenta)") + "</button>";
+    }).join("") + "</div>";
+  });
+  if (conCredito && metodoCredito()) h += '<div class="pg-col-tit ot">Otros</div><div class="chips"><button type="button" class="chip cred" onclick="pgCredito()">' + (P.cred.on ? "✓ Crédito" : "📝 A crédito") + "</button></div>";
+  return h;
+}
+function pgPintarMetodos(){ $("pgMetodos").innerHTML = pgFilasMetodos("pgAgregar", P.lineas.map(l => l.metodo), true); }
+function pgPintarLineas(){
+  let h = "";
+  P.lineas.forEach(l => {
+    const cls = l.tipo === "BS" ? "bs" : "usd";
+    h += '<div class="pl ' + cls + '"><div class="pl-cab"><span>' + (l.tipo === "BS" ? "💙 " : "💚 ") + esc(l.metodo) + '</span><button type="button" class="ico" onclick="pgQuitar(' + l.id + ')">✕</button></div>' +
+      '<div class="pl-cuerpo"><span class="mon">' + (l.tipo === "BS" ? "Bs" : "$") + '</span><input class="inp" type="number" inputmode="decimal" min="0" step="any" id="pgM_' + l.id + '" placeholder="' + (l.tipo === "BS" ? "Monto en Bs" : "Monto en $") + '" value="' + esc(l.monto) + '" oninput="pgMonto(' + l.id + ',this.value)"></div>' +
+      '<div class="pl-eq" id="pgE_' + l.id + '"></div></div>';
+  });
+  if (P.cred.on) {
+    h += '<div class="pl cred"><div class="pl-cab"><span>📝 Crédito · ' + esc(F.cliente.nombre) + '</span><button type="button" class="ico" onclick="pgCredito()">✕</button></div>' +
+      '<div class="pl-cuerpo"><span class="mon">$</span><input class="inp" type="number" inputmode="decimal" min="0" step="any" id="pgCred" placeholder="Monto a crédito ($ BCV)" value="' + esc(P.cred.monto) + '" oninput="P.cred.monto=this.value;P.cred.editado=true;pgActualizar()">' +
+      '<button type="button" class="btn sm" onclick="P.cred.editado=false;pgActualizar();$(\'pgCred\').value=P.cred.monto;">↺ Lo que falta</button></div><div class="pl-eq" id="pgE_cred"></div></div>';
+  }
+  $("pgLineas").innerHTML = h;
+}
+function pgPintarVuelto(){
+  $("pgVuelto").classList.toggle("oculto", !P.vt.on);
+  if (!P.vt.on) return;
+  $("pgVtMetodos").innerHTML = P.vt.lineas.length >= 2 ? "" : pgFilasMetodos("pgVtAgregar", P.vt.lineas.map(v => v.metodo), false);
+  $("pgVtLineas").innerHTML = P.vt.lineas.map((v, k) => '<div class="pl vt"><div class="pl-cab"><span>💸 ' + esc(v.metodo) + '</span><button type="button" class="ico" onclick="pgVtQuitar(' + k + ')">✕</button></div>' +
+    '<div class="pl-cuerpo"><span class="mon">' + (v.tipo === "BS" ? "Bs" : "$") + '</span><input class="inp" type="number" inputmode="decimal" min="0" step="any" id="pgVM_' + k + '" placeholder="Vuelto en ' + (v.tipo === "BS" ? "Bs" : "$") + '" value="' + esc(v.monto) + '" oninput="P.vt.lineas[' + k + '].monto=this.value;pgActualizar()"></div><div class="pl-eq" id="pgVE_' + k + '"></div></div>').join("");
+}
+function pgActualizar(){
+  if (!P) return;
+  const bcv = S.tasas.bcv;
+  if (P.cred.on && !P.cred.editado) {
+    let cub = 0; P.lineas.forEach(l => cub += pgCubre(l));
+    const rest = r2(P.total - cub);
+    P.cred.monto = rest > 0 ? rest.toFixed(2) : "";
+    const inp = $("pgCred"); if (inp && document.activeElement !== inp) inp.value = P.cred.monto;
+  }
+  P.lineas.forEach(l => {
+    const el = $("pgE_" + l.id); if (!el) return;
+    if (!(Number(l.monto) > 0)) { el.innerHTML = ""; return; }
+    el.innerHTML = l.tipo === "BS"
+      ? "cubre <b>$" + fmt(pgCubre(l)) + " BCV</b> (Bs " + fmt(l.monto) + " ÷ " + fmt(bcv) + ")"
+      : "cubre <b>$" + fmt(pgCubre(l)) + " BCV</b> (a tasa Divisas Bs " + fmt(tasaUsd()) + " = Bs " + fmt(r2(Number(l.monto) * tasaUsd())) + ")";
+  });
+  const ec = $("pgE_cred"); if (ec) { const c = pgCredValor(); ec.innerHTML = c > 0 ? "queda a deber <b>$" + fmt(c) + " BCV</b>" : ""; }
+  P.vt.lineas.forEach((v, k) => { const el = $("pgVE_" + k); if (el) el.innerHTML = Number(v.monto) > 0 ? "devuelve <b>$" + fmt(pgCubre(v)) + " BCV</b>" + (v.tipo === "USD" ? " (a tasa Divisas Bs " + fmt(tasaUsd()) + ")" : "") : ""; });
+  const st = pgEstado();
+  // Balance
+  const bs = v => " · Bs " + fmt(r2(v * bcv));
+  let h = "";
+  if (st.hay) {
+    if (st.pend > TOL) h = '<div class="bal falta">⚠️ Falta $' + fmt(st.pend) + " BCV" + bs(st.pendX) + "</div>";
+    else if (st.pend < -TOL && !P.vt.on) h = '<div class="bal sobra">💰 Sobran $' + fmt(-st.pend) + " BCV" + bs(-st.pendX) + '</div><div style="text-align:center;margin-top:8px;"><button type="button" class="btn" onclick="pgVueltoAbrir()">💸 Dar vuelto</button></div>';
+    else if (P.vt.on && st.pend < -TOL) {
+      if (Math.abs(st.queda) <= TOL) h = '<div class="bal ok">✅ Pago exacto con vuelto</div>';
+      else if (st.queda > 0) h = '<div class="bal sobra">Faltan $' + fmt(st.queda) + " BCV por devolver" + bs(st.queda) + "</div>";
+      else h = '<div class="bal falta">⚠️ El vuelto pasa de lo que sobra por $' + fmt(-st.queda) + " BCV</div>";
+    } else h = '<div class="bal ok">✅ Pago exacto</div>';
+    if (st.pend <= TOL && Math.abs(st.dif) > 0.01 && !(st.pend < -TOL && !P.vt.on)) {
+      const favor = st.dif > 0;
+      h += '<div class="dif ' + (favor ? "afavor" : "encontra") + '">💹 Diferencial ' + (favor ? "a favor" : "en contra") + ": <b>$" + fmt(Math.abs(st.dif)) + " BCV</b>. Lo recibido vale $" + fmt(r2(st.vale + st.cred - st.vtVale)) + " y la venta vale $" + fmt(P.total) + ".</div>";
+    }
+  }
+  $("pgBal").innerHTML = h;
+  $("pgVtSobra").textContent = st.pend < -TOL ? "Sobran $" + fmt(-st.pend) + " BCV · Bs " + fmt(r2(-st.pendX * bcv)) : "";
+  const plegar = st.hay && st.pend <= TOL && !P.verMet;
+  $("pgMetodos").classList.toggle("oculto", plegar);
+  $("pgMas").classList.toggle("oculto", !plegar);
+  const vm = $("pgVtMetodos"); if (vm && P.vt.on) vm.classList.toggle("oculto", P.vt.lineas.length >= 2 || (P.vt.lineas.length > 0 && Math.abs(st.queda) <= TOL));
+  $("pgDias").classList.toggle("oculto", !(P.cred.on && $("selDias").options.length > 1));
+}
+function pgAutocompletar(l){
+  let otros = 0; P.lineas.forEach(x => { if (x.id !== l.id) otros += pgCubre(x); });
+  if (P.cred.on && P.cred.editado) otros += pgCredValor();
+  const bcv = S.tasas.bcv, falta = r2(P.total - otros);
+  let v = 0;
+  if (l.tipo === "BS") v = r2(r2(P.total * bcv) - otros * bcv);   // en Bs exactos: suman el total del ticket
+  else v = falta > 0 ? r2(falta * bcv / tasaUsd()) : 0;
+  l.monto = v > 0.004 ? v.toFixed(2) : "";
+  const inp = $("pgM_" + l.id); if (inp) inp.value = l.monto;
+}
+function pgAgregar(i){
+  const m = metodos()[i]; if (!m) return;
+  const ya = P.lineas.find(l => l.metodo === m.metodo);
+  if (ya) { const inp = $("pgM_" + ya.id); if (inp) { inp.focus(); inp.select(); } return; }
+  if (P.lineas.length >= 3) { aviso({ icono: "💳", titulo: "Máximo 3 métodos", html: "Una venta se puede cobrar con hasta 3 métodos de pago. Quita uno con ✕ para usar otro." }); return; }
+  const l = { id: ++P.seq, metodo: m.metodo, tipo: m.tipo, monto: "" };
+  P.lineas.push(l);
+  pgPintarMetodos(); pgPintarLineas(); pgAutocompletar(l); pgActualizar();
+  setTimeout(() => { const inp = $("pgM_" + l.id); if (inp) { inp.focus(); inp.select(); } }, 30);
+}
+function pgQuitar(id){ P.lineas = P.lineas.filter(l => l.id !== id); pgPintarMetodos(); pgPintarLineas(); pgActualizar(); }
+function pgMonto(id, v){ const l = P.lineas.find(x => x.id === id); if (l) { l.monto = v; pgActualizar(); } }
+async function pgCredito(){
+  if (P.cred.on) { P.cred = { on: false, monto: "", editado: false }; }
+  else {
+    if (!F.cliente.cedula) {
+      const r = await modal({ icono: "👤", titulo: "El crédito necesita un cliente", html: '<div class="m-txt">La venta a crédito queda como cuenta por cobrar a nombre del cliente. Esta venta está a nombre de <b>Genérico</b>.<br><br>Sin internet solo se pueden usar los clientes que ya existen en el sistema.</div>',
+        botones: [{ txt: "Cancelar", v: false }, { txt: "👤 Elegir cliente", v: true, cls: "green" }] });
+      if (!r) return;
+      const c = await abrirClientes();
+      if (!c || !F.cliente.cedula) return;
+    }
+    P.cred = { on: true, monto: "", editado: false };
+  }
+  pgPintarMetodos(); pgPintarLineas(); pgActualizar();
+}
+function pgVueltoAbrir(){ P.vt = { on: true, lineas: [] }; pgPintarVuelto(); pgActualizar(); }
+function pgVueltoCerrar(){ P.vt = { on: false, lineas: [] }; pgPintarVuelto(); pgActualizar(); }
+function pgVtAgregar(i){
+  const m = metodos()[i]; if (!m || P.vt.lineas.length >= 2 || P.vt.lineas.some(v => v.metodo === m.metodo)) return;
+  const v = { metodo: m.metodo, tipo: m.tipo, monto: "" };
+  P.vt.lineas.push(v);
+  const st = pgEstado(), resto = Math.max(0, st.quedaX), bcv = S.tasas.bcv;   // sin redondear: el vuelto en Bs sale exacto
+  const x = v.tipo === "BS" ? r2(resto * bcv) : r2(resto * bcv / tasaUsd());
+  v.monto = x > 0.004 ? x.toFixed(2) : "";
+  pgPintarVuelto(); pgActualizar();
+  const k = P.vt.lineas.length - 1;
+  setTimeout(() => { const inp = $("pgVM_" + k); if (inp) { inp.focus(); inp.select(); } }, 30);
+}
+function pgVtQuitar(k){ P.vt.lineas.splice(k, 1); pgPintarVuelto(); pgActualizar(); }
+
+async function pgConfirmar(){
+  const bcv = S.tasas.bcv, tu = tasaUsd();
+  const pagos = [];
+  for (const l of P.lineas) {
+    const v = r2(Number(l.monto) || 0);
+    if (!(v > 0)) { aviso({ icono: "💳", titulo: "Falta un monto", html: "La línea <b>" + esc(l.metodo) + "</b> no tiene monto. Escribe cuánto entra por ahí, o quítala con ✕." }); return; }
+    if (l.tipo === "BS") pagos.push({ metodo: l.metodo, monto: v, tipo: "BS" });
+    else pagos.push({ metodo: l.metodo, monto: v, tipo: "USD", tasaDivisas: tu, equivBCV: r2(v * tu / bcv) });
+  }
+  if (P.cred.on) {
+    const c = pgCredValor();
+    if (!F.cliente.cedula) { aviso({ icono: "👤", titulo: "Falta el cliente", html: "El crédito necesita un cliente con cédula. Elige el cliente y vuelve a guardar." }); return; }
+    if (!(c > 0)) { aviso({ icono: "📝", titulo: "Falta el monto del crédito", html: "Marcaste crédito pero el monto quedó vacío. Usa <b>↺ Lo que falta</b>, escríbelo, o quita el crédito con ✕." }); return; }
+    pagos.push({ metodo: metodoCredito(), monto: c, tipo: "CRED" });
+  }
+  if (!pagos.length) { aviso({ icono: "🧾", titulo: "No hay forma de pago", html: "Toca el método con que paga el cliente (o <b>A crédito</b> si queda a deber)." }); return; }
+  const vuelto = [];
+  if (P.vt.on) {
+    for (const v of P.vt.lineas) {
+      const x = r2(Number(v.monto) || 0);
+      if (!(x > 0)) { aviso({ icono: "💸", titulo: "Falta el monto del vuelto", html: "Elegiste <b>" + esc(v.metodo) + "</b> para el vuelto pero el monto quedó vacío. Escríbelo o quita esa línea." }); return; }
+      const lv = { metodo: v.metodo, tipo: v.tipo, monto: x };
+      if (v.tipo === "BS") lv.tasa = r2(bcv); else lv.equivBCV = r2(x * tu / bcv);
+      vuelto.push(lv);
+    }
+    if (!vuelto.length) { aviso({ icono: "💸", titulo: "Falta de dónde sale el vuelto", html: "Abriste el vuelto pero no elegiste de qué método sale. Elígelo, o toca <b>Quitar vuelto</b>." }); return; }
+  }
+  const st = pgEstado();
+  const bs = v => " (Bs " + fmt(r2(v * bcv)) + ")";
+  if (st.pend > TOL) {
+    if (!await confirmar({ icono: "⚠️", titulo: "Falta dinero", colorOk: "naranja", ok: "Sí, guardar", html: "El pago cubre $" + fmt(st.cubT) + " de $" + fmt(P.total) + ": <b>falta $" + fmt(st.pend) + " BCV</b>" + bs(st.pendX) + ".<br><br>Si la guardas así, esa diferencia queda como diferencial cambiario en contra. Si queda a deber, toca <b>A crédito</b>.<br><br>¿Guardar igualmente?" })) return;
+  } else if (st.pend < -TOL && !P.vt.on) {
+    const r = await modal({ icono: "💰", titulo: "Sobra dinero", html: '<div class="m-txt">El pago cubre $' + fmt(st.cubT) + ": <b>sobran $" + fmt(-st.pend) + " BCV</b>" + bs(-st.pendX) + ".<br><br>¿Le das vuelto al cliente, o queda como diferencial cambiario a favor ($" + fmt(st.dif) + ")?</div>",
+      botones: [{ txt: "💸 Dar vuelto", v: "vuelto" }, { txt: "Queda como diferencial a favor", v: "ok", cls: "green" }] });
+    if (r === "vuelto") { pgVueltoAbrir(); return; }
+    if (r !== "ok") return;
+  } else if (P.vt.on && st.queda < -TOL) {
+    if (!await confirmar({ icono: "⚠️", titulo: "El vuelto pasa de lo que sobra", colorOk: "naranja", ok: "Sí, guardar", html: "Sobraban $" + fmt(-st.pend) + " y el vuelto devuelve $" + fmt(st.vtCub) + ": <b>$" + fmt(-st.queda) + " BCV de más</b>.<br><br>Esa diferencia queda como diferencial cambiario en contra. ¿Guardar igualmente?" })) return;
+  } else if (P.vt.on && st.queda > TOL) {
+    if (!await confirmar({ icono: "⚠️", titulo: "Falta vuelto por dar", colorOk: "naranja", ok: "Sí, guardar", html: "Sobraban $" + fmt(-st.pend) + " y el vuelto solo devuelve $" + fmt(st.vtCub) + ": quedan <b>$" + fmt(st.queda) + " BCV</b>" + bs(st.queda) + " que se registran como diferencial a favor. ¿Guardar igualmente?" })) return;
+  } else if (st.dif < -0.01) {
+    if (!await confirmar({ icono: "⚠️", titulo: "Diferencial en contra", colorOk: "naranja", ok: "Sí, guardar", html: "Lo recibido vale $" + fmt(r2(st.vale + st.cred - st.vtVale)) + " y la venta vale $" + fmt(P.total) + ": <b>$" + fmt(-st.dif) + " BCV en contra</b>. ¿Guardar igualmente?" })) return;
+  }
+  await pgGuardar(pagos, vuelto);
+}
+function vendedorDeLaVenta(){
+  const d = S.datos;
+  const cajero = (d.cajero && d.cajero.nombre) || "";
+  if (!d.trabajoVendedores) return { ventaDirecta: true, vendedorNombre: "", comision: 0, cajeroNombre: cajero };
+  if (d.modoCajas !== "cajero") return { vendedorNombre: (d.vendedor && d.vendedor.nombre) || "", comision: Number(d.vendedor && d.vendedor.comision) || 0, cajeroNombre: cajero };
+  const v = (d.vendedores || []).find(x => String(x.id) === String(F.vend));
+  if (v) return { vendedorId: v.id, vendedorNombre: v.nombre, comision: Number(v.comision) || 0, cajeroNombre: cajero };
+  return { ventaDirecta: true, vendedorNombre: "", comision: 0, cajeroNombre: cajero };
+}
+async function pgGuardar(pagos, vuelto){
+  const btn = $("pgGuardar");
+  btnOcupado(btn, "Guardando…"); $("pgCerrar").disabled = true;
+  const t = S.tasas, ahora = new Date();
+  const v = {
+    id: uuid(), numero: "", creada: ahoraTxt(ahora), fecha: hoyTxt(ahora),
+    caja: S.datos.caja, equipo: S.datos.equipo,
+    tasas: { bcv: t.bcv, div: tasaUsd() },
+    items: F.items.map(i => ({ tipo: i.tipo, codigo: i.codigo, nombre: i.nombre, codigoBarras: i.codigoBarras, cantidad: Number(i.cantidad), precio: i.base, iva: i.iva, manual: !!i.manual })),
+    pago: Object.assign({
+      pagos: pagos, vuelto: vuelto,
+      referencia: $("pgRef").value.trim(), observaciones: $("pgObs").value.trim(),
+      clienteCedula: F.cliente.cedula || "", clienteNombre: F.cliente.nombre || "Genérico",
+      clienteDireccion: F.cliente.direccion || "", clienteTelefono: F.cliente.telefono || "",
+      descuentoTipo: F.desc.tipo, descuentoValor: Number(F.desc.valor) || 0,
+      diasCredito: P.cred.on ? (Number(P.dias) || 0) : 0
+    }, vendedorDeLaVenta()),
+    total: P.total, totalBs: r2(P.total * t.bcv),
+    estado: "por_subir", intentos: 0, msg: "", avisos: [], numeroFactura: "", subidaEn: 0
+  };
+  try { await guardarVentaNueva(v); }
+  catch (e) {
+    btnLibre(btn); $("pgCerrar").disabled = false;
+    aviso({ icono: "❌", titulo: "La venta NO se guardó", html: "El equipo no pudo guardarla (" + esc(e.message) + "). No entregues el ticket: vuelve a tocar <b>Guardar venta</b>. Si sigue fallando, anótala en papel y avísale al administrador." });
+    return;
+  }
+  S.ventas.push(v); _vendidoLocal = null;
+  _ventaGuardada = v;
+  btnLibre(btn); $("pgCerrar").disabled = false;
+  $("pgForm").classList.add("oculto"); $("pgOk").classList.remove("oculto");
+  $("pgOkNum").textContent = v.numero;
+  $("pgOkTxt").innerHTML = "Total Bs " + fmt(v.totalBs) + " · $" + fmt(v.total) + " BCV<br>" + (S.online ? "Se sube al sistema en un momento." : "Se sube sola al sistema cuando vuelva el internet.");
+  limpiarVenta();
+  pintarEstado(); pintarBanners();
+}
+function pgTerminar(imprimir){
+  const v = _ventaGuardada; _ventaGuardada = null;
+  cerrarPago();
+  if (imprimir && v) imprimirTicket(v);
+  toast("✅ Venta guardada");
+  sincronizar();
+  if (window.innerWidth >= 900) $("busca").focus();
+}
+
+// ══ TICKET (mismo formato que Ventas: generarTicket) ══
+function htmlTicket(v){
+  const d = S.datos || {}, cfg = Object.assign({ formato: "ticket80", moneda: "BS", mostrarEquiv: true, nombreDoc: "Nota de Entrega", pieLinea1: "***Gracias por su compra***", pieLinea2: "Puede solicitar su factura en caja." }, d.impresion || {});
+  const enBS = cfg.moneda !== "USD", tasa = v.tasas.bcv || 1, conv = usd => enBS ? fmt(usd * tasa) : fmt(usd), sym = enBS ? "Bs." : "$";
+  const ancho = cfg.formato === "ticket58" ? "58mm" : "80mm", mostrarPU = cfg.formato !== "ticket58";
+  const its = v.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, base: i.precio, iva: i.iva }));
+  const x = totales(its, { tipo: v.pago.descuentoTipo, valor: v.pago.descuentoValor });
+  const p = v.pago, esGen = !p.clienteCedula || p.clienteNombre === "Genérico";
+  const filasProds = its.map(it => {
+    const pu = it.base * (1 + it.iva / 100), tl = pu * it.cantidad;
+    return mostrarPU
+      ? '<tr><td style="padding:2px 0;vertical-align:top;width:40%;line-height:1.5;">' + esc(it.nombre) + '</td><td style="padding:2px 0;text-align:center;width:14%;vertical-align:top;white-space:nowrap;">' + fmtCant(it.cantidad) + '</td><td style="padding:2px 0;text-align:right;width:23%;vertical-align:top;white-space:nowrap;">' + sym + " " + conv(pu) + '</td><td style="padding:2px 0;text-align:right;width:23%;vertical-align:top;white-space:nowrap;">' + sym + " " + conv(tl) + "</td></tr>"
+      : '<tr><td style="padding:2px 0;vertical-align:top;width:48%;line-height:1.5;">' + esc(it.nombre) + '</td><td style="padding:2px 0;text-align:center;width:19.2%;vertical-align:top;white-space:nowrap;">' + fmtCant(it.cantidad) + '</td><td style="padding:2px 0;text-align:right;width:32.8%;vertical-align:top;white-space:nowrap;">' + sym + " " + conv(tl) + "</td></tr>";
+  }).join("");
+  const pagosOrd = (p.pagos || []).filter(q => q.tipo !== "CRED").concat((p.pagos || []).filter(q => q.tipo === "CRED"));
+  const filasPago = pagosOrd.map(q => {
+    let f = '<tr style="' + (q.tipo === "CRED" ? "font-style:italic;" : "") + '"><td style="padding:1px 0;">' + esc(q.metodo) + '</td><td style="text-align:right;padding:1px 0;">' + (q.tipo === "BS" ? "Bs." : "$") + " " + fmt(q.monto) + "</td></tr>";
+    if (q.tipo === "CRED" && Number(p.diasCredito) > 0) {
+      const venc = vencimiento(v.fecha, p.diasCredito);
+      f += '<tr><td colspan="2" style="padding:0 0 1px 6px;font-style:italic;">Días de crédito: ' + p.diasCredito + "</td></tr>";
+      if (venc) f += '<tr><td colspan="2" style="padding:0 0 2px 6px;font-style:italic;">Fecha de Vencimiento: ' + venc + "</td></tr>";
+    }
+    return f;
+  }).join("") + (p.vuelto || []).map(q => '<tr><td style="padding:1px 0;">Vuelto (' + esc(q.metodo) + ')</td><td style="text-align:right;padding:1px 0;">- ' + (q.tipo === "BS" ? "Bs." : "$") + " " + fmt(q.monto) + "</td></tr>").join("");
+  // Persona del comprobante (Configuración → Impresión)
+  let modo = cfg.personaComprobante || "vendedor";
+  if (!d.trabajoVendedores && !String(p.vendedorNombre || "").trim()) modo = "cajero";
+  const per = [];
+  if ((modo === "cajero" || modo === "ambos") && p.cajeroNombre) per.push("Cajero: " + esc(p.cajeroNombre));
+  if ((modo === "vendedor" || modo === "ambos") && p.vendedorNombre) per.push("Vendedor: " + esc(p.vendedorNombre));
+  const logo = (cfg.imprimirLogo !== false && String(cfg.logo || "").indexOf("data:image") === 0)
+    ? '<div style="text-align:center;padding-top:6px;"><img src="' + cfg.logo + '" alt="" style="max-width:' + (cfg.formato === "ticket58" ? "34mm" : "46mm") + ";max-height:" + (cfg.formato === "ticket58" ? "16mm" : "20mm") + ';object-fit:contain;filter:grayscale(100%);"></div>' : "";
+  const equiv = cfg.mostrarEquiv && enBS ? '<tr><td>Total $ BCV:</td><td style="text-align:right;">$' + fmt(x.total) + "</td></tr>" : "";
+  const desc = x.desc > 0 ? '<tr><td>Descuento:</td><td style="text-align:right;">- ' + sym + " " + conv(x.desc) + "</td></tr>" : "";
+  const formaPago = cfg.mostrarFormaPago !== false ? '<hr class="sep"><div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Forma de pago</div><table style="margin-bottom:5px;">' + filasPago + "</table>" : "";
+  const obs = p.observaciones ? '<div style="border-top:1px dashed #ccc;padding:5px 0;font-size:9px;"><strong>Obs:</strong> ' + esc(p.observaciones) + "</div>" : "";
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(v.numero) + "</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:10px;width:" + ancho + ";color:#000;background:white;-webkit-print-color-adjust:exact;line-height:1.4;word-break:break-word;font-weight:bold;}table{width:100%;border-collapse:collapse;}.sep{border:none;border-top:2px solid #000;width:100%;margin:5px 0;display:block;}@media print{@page{margin:0;size:" + ancho + " auto;}body{width:" + ancho + ";margin:0;padding:0 3mm 0 0;}}</style></head><body>" +
+    logo + '<div style="text-align:center;padding:8px 0 5px;"><div style="font-size:13px;font-weight:bold;">' + esc(d.negocio || "MI NEGOCIO") + "</div><div>RIF: " + esc(cfg.rif || "J-00000000") + "</div>" + (cfg.direccion ? "<div>" + esc(cfg.direccion) + "</div>" : "") + "<div>Teléfono: " + esc(cfg.telefono || "") + "</div></div>" +
+    '<hr class="sep"><table style="margin-bottom:5px;font-size:10px;font-weight:bold;"><tr><td></td><td style="text-align:right;">' + per.join("<br>") + "</td></tr>" +
+    "<tr><td>" + (esGen ? "" : esc(p.clienteNombre)) + '</td><td style="text-align:right;">' + esc(cfg.nombreDoc) + " N°: " + esc(v.numero) + "</td></tr>" +
+    "<tr><td>" + (esGen ? "" : esc(p.clienteCedula)) + '</td><td style="text-align:right;">Fecha: ' + esc(v.fecha) + "</td></tr>" +
+    "<tr><td>" + (esGen ? "" : esc(p.clienteTelefono)) + '</td><td style="text-align:right;">Hora: ' + esc(String(v.creada).slice(11, 19)) + "</td></tr></table>" +
+    '<hr class="sep"><table style="margin-bottom:5px;"><thead>' + (mostrarPU
+      ? '<tr style="font-size:11px;font-weight:bold;border-bottom:2px solid #000;"><th style="text-align:left;width:40%;padding:4px 0;">PRODUCTO</th><th style="text-align:center;width:14%;padding:4px 0;">CANT.</th><th style="text-align:right;width:23%;padding:4px 0;">P.U.</th><th style="text-align:right;width:23%;padding:4px 0;">TOTAL</th></tr>'
+      : '<tr style="font-size:12px;font-weight:bold;border-bottom:2px solid #000;"><th style="text-align:left;width:48%;padding:4px 0;">PRODUCTO</th><th style="text-align:center;width:19.2%;padding:4px 0;">CANT.</th><th style="text-align:right;width:32.8%;padding:4px 0;">TOTAL</th></tr>') +
+    "</thead><tbody>" + filasProds + "</tbody></table>" +
+    '<hr class="sep"><table style="margin-bottom:3px;"><tr><td>Subtotal:</td><td style="text-align:right;">' + sym + " " + conv(x.sub) + "</td></tr>" + desc +
+    '<tr><td>IVA:</td><td style="text-align:right;">' + sym + " " + conv(x.ivaR) + '</td></tr><tr style="font-size:11px;font-weight:bold;"><td>Total:</td><td style="text-align:right;">' + sym + " " + conv(x.total) + "</td></tr>" + equiv + "</table>" +
+    formaPago + obs +
+    '<hr class="sep"><div style="text-align:center;padding:6px 0;"><div>' + esc(cfg.pieLinea1 || "") + '</div><div style="margin-top:2px;">' + esc(cfg.pieLinea2 || "") + "</div></div></body></html>";
+}
+function vencimiento(fecha, dias){
+  const p = String(fecha || "").split("-"), n = Number(dias) || 0;
+  if (n <= 0 || p.length !== 3) return "";
+  const f = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 12, 0, 0);
+  f.setDate(f.getDate() + n);
+  return hoyTxt(f);
+}
+function imprimirTicket(v){
+  let html = htmlTicket(v);
+  if (S.pref.dosCopias) html = html.replace(/<body>([\s\S]*)<\/body>/, (m, b) => "<body>" + b + '<div style="page-break-before:always;"></div>' + b + "</body>");
+  const w = window.open("", "_blank", "width=420,height=700");
+  if (w) {
+    w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => { try { w.print(); } catch (e) {} }, 500);
+    setTimeout(() => { try { w.close(); } catch (e) {} }, 2500);
+    return;
+  }
+  // Sin ventanas emergentes: se imprime desde un marco escondido
+  let fr = $("frImprimir");
+  if (!fr) { fr = document.createElement("iframe"); fr.id = "frImprimir"; fr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;"; document.body.appendChild(fr); }
+  fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) {} };
+  fr.srcdoc = html;
+}
+
+// ══ SUBIR LAS VENTAS AL SISTEMA ══
+function datosParaSubir(v){
+  return { id: v.id, numero: v.numero, creada: v.creada, fecha: v.fecha, tasas: v.tasas, items: v.items, pago: v.pago };
+}
+async function sincronizar(manual){
+  if (!S.eq || !S.datos || S.sincronizando) return { subidas: 0 };
+  if (S.permisoMal && !manual) return { subidas: 0 };
+  const cola = S.ventas.filter(v => v.estado === "por_subir").sort((a, b) => String(a.creada).localeCompare(String(b.creada)));
+  if (!cola.length) { if (manual) await actualizarDatos(null, true); return { subidas: 0 }; }
+  S.sincronizando = true; pintarEstado();
+  let subidas = 0, cortado = "";
+  try {
+    for (const v of cola) {
+      let r;
+      v.intentos = (v.intentos || 0) + 1; v.ultimoIntento = ahoraTxt();
+      try { r = await llamar("vsi_subir", { venta: datosParaSubir(v) }, 120000); }
+      catch (e) { v.msg = e.message; await ventaPut(v); cortado = e.message; break; }
+      if (r && r.codigo === "PERMISO") { revisarErrorSistema(r); v.msg = r.msg; await ventaPut(v); cortado = r.msg; break; }
+      S.permisoMal = "";
+      if (r && r.ok) {
+        v.estado = "subida"; v.numeroFactura = String(r.numero || ""); v.avisos = r.avisos || []; v.msg = ""; v.subidaEn = Date.now();
+        subidas++;
+      } else if (r && r.estado === "procesando") {
+        v.msg = r.msg || "Se está subiendo desde otro lado.";
+      } else if (r && r.estado === "invalida") {
+        v.estado = "invalida"; v.msg = r.msg || "El sistema rechazó la venta.";
+      } else if (r && r.reintentar) {
+        v.msg = r.msg || "El sistema estaba ocupado.";
+      } else {
+        v.estado = "pendiente"; v.msg = (r && r.msg) || "El sistema no la pudo registrar.";
+      }
+      await ventaPut(v);
+      _vendidoLocal = null;
+      pintarEstado();
+    }
+  } finally {
+    S.sincronizando = false;
+    pintarEstado(); pintarBanners();
+    if (S.vista === "ventas") pintarVentas();
+  }
+  if (subidas && S.online) await actualizarDatos(null, true);   // existencias al día
+  return { subidas, cortado };
+}
+async function subirAhora(btn){
+  btnOcupado(btn, "Subiendo…");
+  const r = await sincronizar(true);
+  btnLibre(btn);
+  const c = cuentas();
+  if (r && r.cortado) aviso({ icono: "📡", titulo: "No se pudo subir", html: esc(r.cortado) + "<br><br>Las ventas siguen guardadas en este equipo y se suben solas cuando haya conexión." });
+  else if (r && r.subidas) toast("✅ " + r.subidas + " venta" + (r.subidas > 1 ? "s subidas" : " subida"));
+  else if (!c.por && !c.mal) toast("✅ Todo está subido");
+  pintarVentas();
+}
+async function reintentar(id, btn){
+  const v = S.ventas.find(x => x.id === id); if (!v) return;
+  v.estado = "por_subir"; v.msg = "";
+  await ventaPut(v);
+  await subirAhora(btn);
+}
+
+// ══ VENTAS DEL EQUIPO ══
+function filtrarVentas(f){ S.filtro = f; document.querySelectorAll("#filtros button").forEach(b => b.classList.toggle("on", b.dataset.f === f)); pintarVentas(); }
+function estadoHTML(v){
+  if (v.estado === "subida") return (v.avisos && v.avisos.length) ? '<span class="est av">⚠️ Subida #' + esc(v.numeroFactura) + " · con avisos</span>" : '<span class="est sub">✅ Subida #' + esc(v.numeroFactura) + "</span>";
+  if (v.estado === "por_subir") return '<span class="est por">⏳ Por subir</span>';
+  return '<span class="est mal">❌ No se registró</span>';
+}
+function pintarVentas(){
+  const hoy = hoyTxt();
+  const deHoy = S.ventas.filter(v => v.fecha === hoy);
+  const sumBs = deHoy.reduce((s, v) => s + (Number(v.totalBs) || 0), 0), sumUsd = deHoy.reduce((s, v) => s + (Number(v.total) || 0), 0);
+  const c = cuentas();
+  // Por método (hoy): lo cobrado menos el vuelto
+  const porMet = {};
+  deHoy.forEach(v => {
+    (v.pago.pagos || []).forEach(p => { const k = p.metodo + "|" + p.tipo; porMet[k] = (porMet[k] || 0) + (Number(p.monto) || 0); });
+    (v.pago.vuelto || []).forEach(p => { const k = p.metodo + "|" + p.tipo; porMet[k] = (porMet[k] || 0) - (Number(p.monto) || 0); });
+  });
+  let h = '<div><span>Ventas de hoy</span><b>' + deHoy.length + "</b></div>" +
+    '<div><span>Total hoy</span><b>Bs ' + fmt(sumBs) + '</b><span style="text-transform:none;">$' + fmt(sumUsd) + " BCV</span></div>" +
+    '<div><span>Por subir</span><b style="color:var(--blue);">' + c.por + "</b></div>" +
+    '<div><span>Con problema</span><b style="color:' + (c.mal ? "var(--red)" : "inherit") + ';">' + c.mal + "</b></div>";
+  const mets = Object.keys(porMet);
+  if (mets.length) h += '<div style="grid-column:1/-1;"><span>Hoy por método (menos el vuelto)</span>' + mets.map(k => { const [m, t] = k.split("|"); return '<div class="met"><span style="text-transform:none;font-weight:600;color:var(--text);font-size:13px;">' + esc(m) + "</span><b>" + (t === "BS" ? "Bs " : "$") + fmt(porMet[k]) + "</b></div>"; }).join("") + "</div>";
+  $("resumen").innerHTML = h;
+  $("btnSubir").classList.toggle("oculto", !c.por && !c.mal);
+  let lst = S.ventas.slice().sort((a, b) => String(b.creada).localeCompare(String(a.creada)));
+  if (S.filtro === "hoy") lst = lst.filter(v => v.fecha === hoy);
+  else if (S.filtro === "por") lst = lst.filter(v => v.estado === "por_subir");
+  else if (S.filtro === "mal") lst = lst.filter(v => v.estado === "pendiente" || v.estado === "invalida");
+  else if (S.filtro === "av") lst = lst.filter(v => v.estado === "subida" && v.avisos && v.avisos.length);
+  if (!lst.length) { $("listaVentas").innerHTML = '<div class="vacio">No hay ventas aquí.</div>'; return; }
+  $("listaVentas").innerHTML = lst.slice(0, 300).map(v => {
+    const p = v.pago;
+    const items = v.items.map(i => "<tr><td>" + fmtCant(i.cantidad) + " × " + esc(i.nombre) + (i.manual ? " ✏️" : "") + '</td><td class="r">$' + fmt(i.precio * (1 + i.iva / 100) * i.cantidad) + "</td></tr>").join("");
+    const pagos = (p.pagos || []).map(q => "<tr><td>" + esc(q.metodo) + '</td><td class="r">' + (q.tipo === "BS" ? "Bs " : "$") + fmt(q.monto) + "</td></tr>").join("") +
+      (p.vuelto || []).map(q => "<tr><td>Vuelto (" + esc(q.metodo) + ')</td><td class="r">− ' + (q.tipo === "BS" ? "Bs " : "$") + fmt(q.monto) + "</td></tr>").join("");
+    let msg = "";
+    if (v.estado === "subida" && v.avisos && v.avisos.length) msg = '<div class="vt-msg av"><b>Avisos del sistema:</b><br>' + v.avisos.map(esc).join("<br>") + "</div>";
+    if ((v.estado === "pendiente" || v.estado === "invalida") && v.msg) msg = '<div class="vt-msg mal"><b>Por qué no se registró:</b><br>' + esc(v.msg) + "<br><br>La venta sigue guardada en este equipo. Cuando el administrador lo corrija en el sistema, toca <b>Reintentar</b>.</div>";
+    if (v.estado === "por_subir" && v.msg) msg = '<div class="vt-msg av">Último intento: ' + esc(v.msg) + "</div>";
+    return '<div class="vt-item" id="vt_' + v.id + '"><div class="vt-cab" onclick="this.parentNode.classList.toggle(\'abierto\')"><div style="min-width:0;"><div class="n">' + esc(v.numero) + " · " + fechaCorta(v.fecha) + " " + horaDe(v.creada) + "</div>" +
+      '<div class="s">' + esc(p.clienteNombre || "Genérico") + (p.clienteCedula ? " · " + esc(p.clienteCedula) : "") + "</div>" + estadoHTML(v) + "</div>" +
+      '<div class="m">Bs ' + fmt(v.totalBs) + '<div style="font-size:11px;color:var(--text-dim);font-weight:600;">$' + fmt(v.total) + "</div></div></div>" +
+      '<div class="vt-det">' + msg + "<table>" + items + "</table><table>" + pagos + "</table>" +
+      '<div style="font-size:12px;color:var(--text-dim);">Tasa BCV Bs ' + fmt(v.tasas.bcv) + (v.tasas.div ? " · Divisas Bs " + fmt(v.tasas.div) : "") + (p.descuentoTipo !== "ninguno" && p.descuentoValor ? " · descuento " + (p.descuentoTipo === "pct" ? fmt(p.descuentoValor) + " %" : "$" + fmt(p.descuentoValor)) : "") + (p.referencia ? " · Ref: " + esc(p.referencia) : "") + "</div>" +
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;"><button type="button" class="btn sm" onclick="imprimirPorId(\'' + v.id + '\')">🖨️ Reimprimir</button>' +
+      ((v.estado === "pendiente" || v.estado === "invalida") ? '<button type="button" class="btn sm green" onclick="reintentar(\'' + v.id + '\',this)">🔁 Reintentar</button>' : "") + "</div></div></div>";
+  }).join("");
+}
+function imprimirPorId(id){ const v = S.ventas.find(x => x.id === id); if (v) imprimirTicket(v); }
+function descargarRespaldo(){
+  const d = S.datos || {};
+  const obj = { tipo: "ControlMaster · Caja sin internet · respaldo", negocio: d.negocio, caja: d.caja, equipo: d.equipo, generado: ahoraTxt(), ventas: S.ventas };
+  const blob = new Blob([JSON.stringify(obj, null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "caja-sin-internet-" + (d.equipo || "equipo") + "-" + ahoraTxt().replace(/[: ]/g, "-") + ".json";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast("💾 Respaldo descargado");
+}
+
+// ══ AJUSTES ══
+function pintarAjustes(){
+  const d = S.datos || {}, t = S.tasas || {};
+  $("infoEquipo").innerHTML = "<span>Negocio</span><b>" + esc(d.negocio) + "</b><span>Caja</span><b>" + esc(d.caja) + "</b><span>Equipo</span><b>" + esc(d.equipo) + (d.nombreEquipo ? " · " + esc(d.nombreEquipo) : "") + "</b>" +
+    "<span>Datos del sistema</span><b>" + (d.descargadoEn ? fechaCorta(hoyTxt(new Date(d.descargadoEn))) + " " + pad(new Date(d.descargadoEn).getHours()) + ":" + pad(new Date(d.descargadoEn).getMinutes()) : "—") + "</b>" +
+    "<span>Productos</span><b>" + (d.productos || []).length + "</b><span>Clientes</span><b>" + (d.clientes || []).length + "</b>" +
+    "<span>Clave sin internet</span><b>" + (d.claveSinInternet ? "✅ puesta" : "⚠️ no puesta") + "</b>";
+  $("infoTasas").innerHTML = "<span>BCV</span><b>Bs " + fmt(t.bcv) + "</b><span>Divisas ($ en efectivo)</span><b>" + (t.div > 0 ? "Bs " + fmt(t.div) : "—") + "</b><span>De</span><b>" + fechaCorta(t.fecha) + (t.origen === "manual" ? " (puesta a mano)" : " (del sistema)") + "</b>";
+  $("chkDosCopias").checked = !!S.pref.dosCopias; $("chkClaro").checked = !!S.pref.claro;
+}
+async function guardarPref(){
+  S.pref.dosCopias = $("chkDosCopias").checked; S.pref.claro = $("chkClaro").checked;
+  aplicarTema();
+  try { await kvSet("pref", S.pref); toast("✅ Cambios guardados"); } catch (e) {}
+}
+function aplicarTema(){ document.body.classList.toggle("light", !!S.pref.claro); }
+async function cambiarTasa(btn){
+  if (!await pedirClave("Cambiar tasa", "La tasa cambia lo que se cobra en Bs. Escribe la clave sin internet:")) return;
+  const t = S.tasas || {};
+  const r = await modal({
+    icono: "💱", titulo: "Tasas para cobrar sin internet",
+    html: '<div class="m-txt" style="font-size:13px;color:var(--text-dim);">Ahora: BCV Bs ' + fmt(t.bcv) + " · Divisas Bs " + (t.div > 0 ? fmt(t.div) : "—") + ". Cuando vuelva el internet, el equipo toma las del sistema.</div>" +
+      '<label class="lbl">Tasa BCV (Bs por $)</label><input class="inp" id="tBcv" type="number" inputmode="decimal" min="0" step="any" placeholder="Bs ' + fmt(t.bcv) + '">' +
+      '<label class="lbl">Tasa Divisas — los $ en efectivo (Bs por $)</label><input class="inp" id="tDiv" type="number" inputmode="decimal" min="0" step="any" placeholder="' + (t.div > 0 ? "Bs " + fmt(t.div) : "Opcional") + '"><div class="m-err" id="tErr"></div>',
+    botones: [{ txt: "Cancelar", v: false }, { txt: "✅ Guardar", v: true, cls: "green" }],
+    foco: "tBcv",
+    antes: (v) => {
+      if (!v) return true;
+      const b = $("tBcv").value === "" ? t.bcv : Number($("tBcv").value), dv = $("tDiv").value === "" ? t.div : Number($("tDiv").value);
+      if (!(b > 0)) { $("tErr").textContent = "Escribe la tasa BCV."; return false; }
+      if (t.bcv > 0 && (b > t.bcv * 1.5 || b < t.bcv * 0.6)) { $("tErr").textContent = "La tasa BCV cambia demasiado (más de 50 %). Revisa el número."; return false; }
+      if (dv && dv < b * 0.9) { $("tErr").textContent = "La tasa Divisas no puede quedar por debajo de la BCV."; return false; }
+      S.tasas = { bcv: b, div: dv || 0, fecha: hoyTxt(), origen: "manual" };
+      return true;
+    }
+  });
+  if (!r) return;
+  await kvSet("tasas", S.tasas);
+  S.tasaOkHoy = hoyTxt();
+  toast("✅ Cambios guardados");
+  pintarCabecera(); pintarAjustes(); buscar(); pintarFactura();
+}
+
+// ══ MODALES, TOAST Y BOTONES ══
+function modal(o){
+  return new Promise(resolve => {
+    const fondo = document.createElement("div");
+    fondo.className = "mfondo";
+    fondo.innerHTML = '<div class="modal' + (o.ancho ? " ancho" : "") + '">' + (o.icono ? '<div class="m-ico">' + o.icono + "</div>" : "") +
+      '<div class="m-tit">' + esc(o.titulo || "") + "</div>" + (o.html || "") +
+      '<div class="m-btns">' + (o.botones || [{ txt: "Entendido", v: true, cls: "green" }]).map((b, k) =>
+        '<button type="button" class="btn ' + (b.cls || "") + '" data-k="' + k + '"' + (b.v === true ? ' data-v="ok"' : "") + ">" + b.txt + "</button>").join("") + "</div></div>";
+    document.body.appendChild(fondo);
+    let hecho = false;
+    const cerrar = v => { if (hecho) return; hecho = true; fondo.remove(); resolve(v); };
+    const bots = o.botones || [{ txt: "Entendido", v: true, cls: "green" }];
+    fondo.querySelectorAll(".m-btns .btn").forEach(el => el.addEventListener("click", async () => {
+      const b = bots[Number(el.dataset.k)];
+      if (o.antes) {
+        const txt = el.innerHTML;
+        if (b.spin) btnOcupado(el, b.spin);
+        let seguir = false;
+        try { seguir = await o.antes(b.v); } catch (e) { seguir = false; }
+        if (b.spin) btnLibre(el, txt);
+        if (!seguir) return;
+      }
+      cerrar(b.v);
+    }));
+    if (o.alAbrir) o.alAbrir(fondo, cerrar);
+    setTimeout(() => {   // si ya escribieron en otro campo del modal, no se les mueve el cursor
+      if (fondo.contains(document.activeElement)) return;
+      const f = o.foco ? $(o.foco) : fondo.querySelector('.m-btns .btn[data-v="ok"]') || fondo.querySelector(".m-btns .btn");
+      if (f) f.focus();
+    }, 40);
+  });
+}
+function aviso(o){ return modal({ icono: o.icono || "ℹ️", titulo: o.titulo, html: '<div class="m-txt">' + (o.html || "") + "</div>", botones: [{ txt: "Entendido", v: true, cls: "green" }] }); }
+function confirmar(o){
+  return modal({ icono: o.icono || "❓", titulo: o.titulo, html: '<div class="m-txt">' + (o.html || "") + "</div>",
+    botones: [{ txt: o.cancel || "Cancelar", v: false }, { txt: o.ok || "Aceptar", v: true, cls: o.colorOk || "green" }] });
+}
+let _toastT = null;
+function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(_toastT); _toastT = setTimeout(() => el.classList.remove("on"), 1800); }
+function btnOcupado(b, txt){ if (!b) return; if (b._txt == null) b._txt = b.innerHTML; b.disabled = true; b.innerHTML = '<span class="sp"></span>' + esc(txt || "Procesando…"); }
+function btnLibre(b, txt){ if (!b) return; b.disabled = false; if (txt != null) b.innerHTML = txt; else if (b._txt != null) b.innerHTML = b._txt; b._txt = null; }
+// Ningún campo numérico cambia con la rueda del ratón
+document.addEventListener("wheel", e => { const t = e.target; if (t && t.type === "number" && document.activeElement === t) t.blur(); }, { passive: true });
+// Antes de cerrar la pestaña: aviso si hay una venta a medias
+window.addEventListener("beforeunload", e => { if (F.items.length || P) { e.preventDefault(); e.returnValue = ""; } });
+</script>
+</body>
+</html>
