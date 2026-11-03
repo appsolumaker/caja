@@ -215,6 +215,7 @@ select.inp{padding:8px 10px;}
     <button type="button" data-v="vender" class="on" onclick="irA('vender')">🛒 Vender</button>
     <button type="button" data-v="ventas" onclick="irA('ventas')">🧾 Ventas</button>
     <button type="button" data-v="ajustes" onclick="irA('ajustes')">⚙️</button>
+    <button type="button" id="btnTema" title="Tema claro / oscuro" onclick="cambiarTema()">☀️</button>
   </nav>
 </header>
 <div class="tasabar" id="tasaBar"></div>
@@ -364,7 +365,7 @@ select.inp{padding:8px 10px;}
 //  Todo queda en este equipo (IndexedDB) hasta que el sistema confirma el número de factura.
 //  Solo tasaBin APAGADO: los Bs a tasa BCV y los $ a tasa Divisas (H9).
 // ══════════════════════════════════════════════════════════════
-const APP_VER = "1.0 · 3-11-2026";
+const APP_VER = "1.1 · 3-11-2026";
 const DB_NOMBRE = "cm_caja_sin_internet";
 const TOL = 0.011;   // un centavo, como el servidor (> 0,01)
 
@@ -486,6 +487,7 @@ function revisarErrorSistema(r){
 
 // ══ ARRANQUE ══
 window.addEventListener("load", arrancar);
+window.addEventListener("hashchange", () => { if (/[#&]a=/.test(location.hash)) location.reload(); });   // enlace de activación abierto con la página ya abierta
 async function arrancar(){
   $("verApp").textContent = "Caja sin internet · versión " + APP_VER;
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
@@ -500,10 +502,17 @@ async function arrancar(){
   aplicarTema();
 
   const act = leerActivacion();
+  let rechazada = 0;
   if (act) {
-    S.eq = act;
-    await kvSet("equipo", act);
     history.replaceState(null, "", location.pathname + location.search);   // el enlace es una llave: se quita de la barra
+    const otroNegocio = S.eq && S.eq.url !== act.url;
+    const sinSubir = S.ventas.filter(v => v.estado !== "subida").length;
+    if (otroNegocio && sinSubir) rechazada = sinSubir;   // no se mezclan ventas de dos negocios
+    else {
+      if (otroNegocio) await borrarDatosDelEquipo();      // todo estaba subido: el equipo empieza de cero con el negocio nuevo
+      S.eq = act;
+      await kvSet("equipo", act);
+    }
   }
   if (!S.eq) { mostrarVista("activar"); pintarEstado(); return; }
   if (!S.datos) {
@@ -516,6 +525,14 @@ async function arrancar(){
     return;
   }
   listo();
+  if (rechazada) aviso({ icono: "⛔", titulo: "Ese enlace es de otro negocio",
+    html: "Este equipo tiene <b>" + rechazada + " venta" + (rechazada > 1 ? "s" : "") + "</b> de <b>" + esc(S.datos.negocio) + "</b> que todavía no " + (rechazada > 1 ? "están registradas" : "está registrada") + " en su sistema, y el enlace que abriste es de otro negocio. Para no mezclarlas, el equipo sigue con <b>" + esc(S.datos.negocio) + "</b>.<br><br>Primero sube o resuelve esas ventas (pestaña Ventas) y después vuelve a abrir el enlace." });
+}
+// Cambio de negocio en este equipo (con todo subido): se borran las ventas, los datos y el contador
+async function borrarDatosDelEquipo(){
+  await dbOp("ventas", "readwrite", s => s.clear());
+  await dbOp("kv", "readwrite", s => { s.delete("datos"); s.delete("tasas"); return s.delete("seq"); });
+  S.ventas = []; S.datos = null; S.tasas = null; _vendidoLocal = null;
 }
 function listo(){
   mostrarVista(S.vista === "activar" ? "vender" : S.vista);
@@ -523,7 +540,9 @@ function listo(){
   setTimeout(async () => { const r = await sincronizar(); if (!(r && r.subidas)) actualizarDatos(null, true); }, 800);
   setInterval(() => sincronizar(), 60000);                     // cada minuto, si hay algo por subir
   setInterval(() => { if (S.online !== false) actualizarDatos(null, true); }, 20 * 60000);
-  window.addEventListener("online", () => { sincronizar(); });
+  window.addEventListener("online", () => { sincronizar(); revisarVersion(); });
+  setTimeout(revisarVersion, 5000);
+  setInterval(revisarVersion, 30 * 60000);
   window.addEventListener("offline", () => marcarOnline(false));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizar(); });
 }
@@ -632,6 +651,7 @@ function pintarBanners(){
   let h = "";
   if (S.permisoMal) h += '<div class="banner mal">⛔ ' + esc(S.permisoMal) + " Puedes seguir vendiendo; las ventas quedan guardadas en este equipo.</div>";
   if (S.datosMal) h += '<div class="banner mal">⛔ ' + esc(S.datosMal) + "</div>";
+  if (_verNueva) h += '<div class="banner av">🔄 Hay una versión nueva de la caja. Se actualiza sola cuando termines esta venta.</div>';
   const c = cuentas();
   if (c.mal) h += '<div class="banner av">⚠️ ' + c.mal + ' venta' + (c.mal > 1 ? "s" : "") + ' no se pudo' + (c.mal > 1 ? "eron" : "") + ' registrar en el sistema. ' + (c.mal > 1 ? "Están guardadas" : "Está guardada") + ' en este equipo: revisa el motivo en <a href="#" onclick="irA(\'ventas\');filtrarVentas(\'mal\');return false;" style="color:inherit;font-weight:800;">Ventas → Con problema</a>.</div>';
   $("banners").innerHTML = h;
@@ -810,6 +830,7 @@ function limpiarVenta(){
   Object.assign(F, nuevaFactura()); F.tipoPrecio = tp;   // el vendedor vuelve al de la caja (como en Ventas)
   $("busca").value = "";
   pintarSelectores(); buscar(); pintarFactura();
+  if (_verNueva && !_ventaGuardada) setTimeout(recargarSiSePuede, 300);
 }
 
 // ── Clave sin internet (descuento, precio manual, cambiar tasa) ──
@@ -1213,6 +1234,7 @@ function pgTerminar(imprimir){
   if (imprimir && v) imprimirTicket(v);
   toast("✅ Venta guardada");
   sincronizar();
+  if (_verNueva) setTimeout(recargarSiSePuede, 4000);   // después de mandar el ticket a la impresora
   if (window.innerWidth >= 900) $("busca").focus();
 }
 
@@ -1429,7 +1451,42 @@ async function guardarPref(){
   aplicarTema();
   try { await kvSet("pref", S.pref); toast("✅ Cambios guardados"); } catch (e) {}
 }
-function aplicarTema(){ document.body.classList.toggle("light", !!S.pref.claro); }
+function aplicarTema(){
+  document.body.classList.toggle("light", !!S.pref.claro);
+  const b = $("btnTema"); if (b) b.textContent = S.pref.claro ? "🌙" : "☀️";
+  const c = $("chkClaro"); if (c) c.checked = !!S.pref.claro;
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = S.pref.claro ? "#eef1f5" : "#07090d";
+}
+async function cambiarTema(){
+  S.pref.claro = !S.pref.claro;
+  aplicarTema();
+  try { await kvSet("pref", S.pref); } catch (e) {}
+}
+
+// ══ VERSIÓN NUEVA DE LA PÁGINA ══
+// Con internet revisa si en GitHub hay una versión nueva (al abrir, al volver el internet y cada 30 min).
+// Si la hay, se recarga sola cuando no hay una venta a medias; si la hay, espera a que se termine.
+let _verNueva = "";
+async function revisarVersion(){
+  if (navigator.onLine === false) return;
+  try {
+    const r = await fetch("./index.html?v=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/const APP_VER = "([^"]+)"/);
+    if (!m || m[1] === APP_VER) return;
+    let ya = ""; try { ya = sessionStorage.getItem("cm_caja_recargada") || ""; } catch (e) {}
+    if (ya === m[1]) return;   // ya se recargó por esta versión (el servidor todavía da la anterior): no insistir
+    _verNueva = m[1];
+    if (!recargarSiSePuede()) pintarBanners();
+  } catch (e) {}
+}
+function recargarSiSePuede(){
+  if (!_verNueva) return false;
+  if (F.items.length || P || S.sincronizando || document.querySelector(".mfondo:not(#mPago)")) return false;
+  try { sessionStorage.setItem("cm_caja_recargada", _verNueva); } catch (e) {}
+  location.replace(location.pathname + "?v=" + encodeURIComponent(_verNueva));
+  return true;
+}
 async function cambiarTasa(btn){
   if (!await pedirClave("Cambiar tasa", "La tasa cambia lo que se cobra en Bs. Escribe la clave sin internet:")) return;
   const t = S.tasas || {};
